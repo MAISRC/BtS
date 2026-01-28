@@ -21,7 +21,6 @@ ui = fluidPage(
 #I'VE FOUND A LOT OF REASONS OVER MY TIME WITH SHINY TO INCORPORATE CUSTOM JS SCRIPTS TO ACCOMPLISH CERTAIN SPECIFIC THINGS. I LOAD THESE HERE (SITUATIONALLY). COMMENT OUT ANY THAT AREN'T RELEVANT.
 
   #LOAD IN GOOGLE ANALYTICS SCRIPT, IF USING.
-  shiny::tags$head(
     shiny::tags$script(
       src = "https://www.googletagmanager.com/gtag/js?id=G-xxxxx", #YOU WILL NEED TO GET ONE OF THESE G-TAGS FROM GOOGLE ANALYTICS
       async = ""
@@ -65,9 +64,8 @@ tags$script(
 tags$script(
   src = "js/shinyLiveReportingRegion.js"
 )
-
 ),
-  
+
 # ### ENABLING OPTIONAL FUNCTIONALITY ### ------------------------------------------
 
 #SOME SHINY-AFFILIATED PACKAGES NEED TO HAVE THEIR FEATURES "ENABLED" IN THE UI. I PUT THOSE FUNCTION CALLS HERE. COMMENT OUT OR DELETE IF THE ASSOCIATED PACKAGES AREN'T BEING USED.
@@ -98,7 +96,6 @@ disconnectMessage(text = " ",  #THIS DOESN'T MATTER AS WE'RE GONNA REPLACE IT WI
    ), #THIS ALT CAN BE EMPTY--THE TEXT ABOVE CONVEYS ALL NECCESSARY INFO. 
    color = "#7a0019",
    fadeout = 500
-   ),
 ),
 
 
@@ -118,13 +115,15 @@ tags$header(
     #       alt = "P.I. Charter.",#THIS ALT SHOULD JUST BE THE TEXT SIGHTED PERSONS WOULD SEE HERE.
     #       style = "min-width: 320px;")
     # ),
-    class = "flexthis flexcol width100 justifycenter flexwrap"), 
+), 
     #IF THERE'S A NAV BAR IN THE HEADER, IT SHOULD BEAR THIS SEMANTIC TAG.
+    class = "flexthis flexcol width100 justifycenter flexwrap",
     tags$nav( 
                          
       class = "flexthis flexwrap justifycenter",
                      )
-                    ), 
+                    )
+),
 
 
 ## ### MAIN CONTENT/MODULES ### --------------------------------------------
@@ -132,6 +131,8 @@ tags$header(
 #PUT YOUR APP'S MAIN CONTENT HERE. 
 # 
 # exampleUI(), #IF YOU HAVE YOUR UI/SERVER FILES MODULARIZED, HERE IS WHERE YOU MIGHT OPEN THE MODULES.
+
+textOutput("sampleText"),
 
 
 ## ### FOOTER ### ----------------------------------------------------------
@@ -143,7 +144,7 @@ App last updated XXX XXX XXX. Version XX.XX.XX. View the <a href = 'XXX' target 
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"
- ),
+),
 
 
 # ARIA LIVE REPORTING REGION ----------------------------------------------
@@ -153,6 +154,6 @@ tags$div(id = "a11y-live-region",
          `aria-live` = "assertive", 
          `aria-atomic` = "true", 
          class = "sr-only", 
-         style = "position: absolute; width: 1px; height: 1px; margin: -1px; border: 0; padding: 0; overflow: hidden; clip: rect(0 0 0 0);"),
+         style = "position: absolute; width: 1px; height: 1px; margin: -1px; border: 0; padding: 0; overflow: hidden; clip: rect(0 0 0 0);")
 
 ) #End UI
