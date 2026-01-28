@@ -1,0 +1,1 @@
+This subfolder stores code that performs essential administrative functions for the App, but not anything that is actually needed while the app is running (what I might call an "upstream" process"). By storing that code here, it's somewhere obvious, but it can be easily excluded from the deployment process.

@@ -1,0 +1,1 @@
+This folder is a required folder for most Shiny Apps, as this is where "media files" are assumed to be stored. This includes images, sound files, and movie clips. It also includes font files. Importantly, it is also where the app's CSS and JavaScript (JS) files are stored. 

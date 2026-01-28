@@ -1,0 +1,1 @@
+If there are upstream processes that yield inputs for the app (these require R code to generate), those inputs go in this folder to distinguish them from other inputs. 

@@ -1,0 +1,357 @@
+/* ### LOADING FONTS ### */
+
+/* THIS LOADS IN THE OPENSANS FONT, WHICH IS THE ONE RECOMMENDED BY THE UNIVERSITY, AND GIVES IN THE NICKNAME OPENSANS. DO NOT REMOVE THE OPENSANS FILE FROM THE WWW FOLDER REFERENCED HERE. */
+@font-face {
+  src: url('OpenSans-VariableFont_wdth,wght.ttf') format('truetype');
+  font-family: "OpenSans";
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+
+
+/* ### ADJUSTING APP-WIDE ELEMENTS ### */
+
+/* THIS RULE SETS A EVER-SO-SLIGHTLY OFF-WHITE BACKGROUND FOR THE ENTIRE APP (SOFTER THAN WHITE) WITH A MINNESOTA RED FONT COLOR AS DEFAULT (WITH ENOUGH CONTRAST TO MEET ACCESSIBILITY STANDARDS). IT ALSO SETS FONT SIZE TO LARGE AND FONT TO OPENSANS BY DEFAULT, BOTH OF WHICH ALIGN WITH ACCESSIBILITY AND UMN STANDARDS. */
+body {
+  background-color: #FAFAFA;
+  color: #7a0019;
+  font-family: "OpenSans", Arial, sans-serif;
+  font-size: large;
+}
+
+/* THIS SET OF RULES APPLIES TO LINKS IN THEIR UNCLICKED, HOVERED, AND CLICKED STATES, RESPECTIVELY. THE FONT COLORS HERE ARE UMN-INSPIRED BUT HAVE SUFFICIENT CONTRAST FOR ACCESSIBILITY. */
+a {
+  color: #704D00;
+  text-decoration: underline;
+}
+
+a:hover {
+  color: #664600;
+}
+
+a:visited {
+  color: #704D00;
+}
+
+/* TO MEET ACCESSIBILITY REQUIREMENTS, ALL APPS SHOULD HAVE AN H1. I USUALLY MAKE THIS A LOGO IMAGE AND LABEL IT AS AN H1 VIA ARIA-LABELING, BUT OTHERWISE, WE'D ADJUST ITS APPEARANCE THIS WAY. */
+h1 {
+  
+}
+
+/* TO MEET ACCESSIBILITY REQUIREMENTS, WE MUST USE H2 ELEMENTS, SO THIS RULE ADJUSTS THEIR APPEARANCE. */
+h2 {
+  font-weight: bold;
+  font-size: 175%;
+  text-align: center;
+  color: #C28100;
+}
+
+/* FOR DIGITAL ACCESSIBILITY, WE NEED TO USE HEADER/OUTLINE STRUCTURE, SO THE APP SHOULD HAVE H3S. THIS RULE ADJUSTS WHAT THOSE LOOK LIKE. */
+h3 {
+  display: inline;
+  font-weight: bold;
+  color: #7a0019;
+  font-style: italic;
+  padding-right: 2%;
+}
+
+/* MY APPS DON'T ALWAYS GO AS DEEP AS H4 HEADERS BUT WE CAN USE THIS RULE TO ADJUST THEM ALL. */
+h4 {
+  
+}
+
+/* ANY APPS THAT HAVE A MENU BAR OR A SET OF TABS THAT CAN BE CLICKED TO DIRECT USERS ELSEWHERE IN THE APP OR ON THE WEB SHOULD USE A NAV ELEMENT TO DISTINGUISH THIS. THIS RULE ADJUSTS THE APPEARANCE OF SUCH AN ELEMENT. */
+nav {
+  
+}
+
+/* THE "PRIMARY" PART OF THE APP SCREEN (OR OF A TAB) SHOULD BE WRAPPED IN A SEMANTIC "MAIN" ELEMENT TAG. THIS ADJUSTS SUCH AN ELEMENT'S APPEARANCE. */
+main {
+  
+}
+
+/* IF THE APP HAS A SIDEBAR PANEL OR SOMETHING SIMILAR THAT CONTAINS OPTIONS OR TOGGLES OR EXTRA CONTENT, IT SHOULD BE WRAPPED IN AN ASIDE TAG, WHICH CAN BE ADJUSTED USING THIS RULE. */
+aside {
+  
+}
+
+/* MY APPS DON'T TEND TO USE IMAGES, BUT THIS RULE WOULD EDIT THEM ALL, WHICH CAN BE USEFUL FOR FORCING THEM TO ADHERE TO A CERTAIN SIZE. */
+img {
+  object-fit: contain;
+  max-height: 100px;
+  max-width: 100%;
+  margin-top: 10px;
+}
+
+/* APPS NEED TO HAVE A SINGLE, CONSISTENT FOCUS INDICATOR, SO THIS WILL SET THAT. SOMETIMES, DIFFERENT ELEMENTS IN SHINY APPS GET DIFFERENT FOCUS INDICATORS BY DEFAULT. */
+:focus-visible {
+  outline: 3px solid #333 !important; 
+  outline-offset: 2px !important;
+}
+
+/* ### ADJUSTING SHINY-SPECIFIC ELEMENTS ### */
+
+/* IF USING SHINY'S TABPANELS AND TABSETPANELS, THIS SETS A MINIMUM WIDTH TO THESE OF 320 PX, WHICH IS ABOUT AS SMALL AS YOU'D WANT THEM FOR MOBILE DEVICES IN PORTRAIT MODE. */
+div.tab-content {
+  min-width: 320px;
+}
+
+/* THE FOLLOWING TWO RULES APPLY TO A NAVBAR PRODUCED USING NAVBARPAGE. I DON'T RECOMMEND USING THIS SHINY FUNCTIONALITY--IT'S FUSSY--BUT IF YOU DO, THEN THESE RULES CAN ADJUST ITS APPEARANCE. */
+nav.navbar {
+
+}
+
+div.navbar-collapse {
+
+}
+
+div.navbar-header {
+
+}
+
+/* IF USING SHINY MODALS, THIS ADJUSTS THE TITLES OF THOSE MODALS. THE TITLES OF THESE ALMOST ALWAYS LOOK VERY SMALL, SO THIS ADJUSTMENT IS PRACTICALLY ESSENTIAL. */
+.modal-title {
+  font-size: x-large; 
+}
+
+/* THE NEXT TWO RULES HAVE TO DO WITH ADJUSTING THE APPEARANCE OF MODALS IF YOU USE SHINY'S DEFAULT MODAL SYSTEM. */
+div.modal-body {
+  color: black;
+  display: flex;
+  justify-content: center;
+}
+
+div.modal-header {
+  text-align: center;
+}
+
+/* SOMETIMES, WITH WAITERS, YOU NEED TO ADJUST THEIR EXACT LOCATIONS A LITTLE TO GET THEM TO ALIGN WITH THE ELEMENTS THEY HIDE. THIS RULE ALLOWS FOR THAT. */
+.waiter-overlay.waiter-local {
+  left: 0 !important;  
+}
+
+
+
+/* ### ADJUSTING COMMON SEMANTIC ELEMENTS/TAGS ### */
+
+/* FOR DIGITAL ACCESSIBILITY, WE NEED TO USE SEMANTIC TAGS FOR ALL COMMON WEBSITE ELEMENTS. THE HEADER IS A PERSISTENT ELEMENT AT THE TOP OF THE PAGE. THIS SETS A MINIMUM WIDTH FOR IT AND CENTERS IT BY DEFAULT. */
+header {
+  margin-left: 0px !important;
+  margin-right: 0px !important;
+  min-width: 320px;
+  background-color: #e1e1e1;
+  margin-bottom: 25px;
+  border-top: 5px solid #7a0019;
+  border-bottom: 5px solid #7a0019;
+}
+
+/* SIMILAR TO A HEADER, THERE IS GENERALLY A FOOTER ELEMENT AT THE BOTTOM OF THE SCREEN. THIS RULE WILL ADJUST ITS APPEARANCE. */
+footer#footerText {
+  font-size: 75%; 
+  padding-left: 1%; 
+  margin-bottom: 10px;
+  margin-top: 15px;
+  text-align: center;
+  background-color: #7a0019;
+  color: #FAFAFA
+}
+
+footer#footerText a {
+  color: #ffcc33;
+}
+
+footer#footerText a:hover, footer#footerText a:focus {
+  color: #FFFF6E;
+}
+
+/* A COMMONLY REQUIRED SEMANTIC TAG IS FIELDSET FOR GROUPS OF INPUTS. THIS CAN BE USED TO ADJUST ALL SUCH FIELDSETS. */
+fieldset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ANOTHER COMMON SEMANTIC TAG IS SECTION, WHICH IS FOR A DISTINCT SECTION OF THE PAGE, SUCH AS ONE CONTAINING BACKGROUND INFO OR ARTICLES. THIS RULE WOULD TARGET ALL SUCH ELEMENTS. */
+section {
+
+}
+
+/* FOR ACCESSIBILITY, WHENEVER AN APP INCLUDES A FORM THAT GATHERS USER-SPECIFIC DATA (AND MAYBE SUBMITS IT), IT SHOULD HAVE A FORM TAG AROUND IT. THIS RULE WOULD ADJUST ALL SUCH FORMS. */
+form {
+
+}
+
+/* FOR ACCESSIBILITY, THE FIGURE AND FIGCAPTION SEMANTIC TAGS ARE TO BE USED FOR EVERY FIGURE. THIS RULE WOULD ADJUST THE APPEARANCE OF ALL FIGURE CAPTIONS. */
+figcaption {
+  color: #545454;
+  font-style: italic;
+  font-size: 80%;
+}
+
+/* THIS IS THE SAME BUT FOR THE CAPTION TAGS OFTEN USED BY DT TABLES INSTEAD. */
+caption {
+  color: #545454; 
+  font-style: italic;
+  font-size: 100%;
+}
+
+/* TO MEET ACCESSIBILITY REQUIREMENTS, CONTACT INFO IS SUPPOSED TO BE HOUSED IN AN ADDRESS SEMANTIC TAG. THIS RULE WOULD ADJUST THE APPEARANCE OF ALL SUCH TAGS. */
+address {
+  display: inline;
+}
+
+/* WHEN USING A FIELDSET SEMANTIC TAG, ALL SUCH FIELDSETS SHOULD BE ACCOMPANYIED BY A LEGEND TAG. THIS WOULD ADJUST ALL SUCH LEGENDS. */
+legend {
+  width: 80%; 
+  margin: 5px auto; 
+  color: black; 
+  min-width: 310px;
+  font-size: medium;
+  display: flex;
+  justify-content: center;
+}
+
+
+
+/* ### ADJUSTING SHINY-RELATED INPUT WIDGETS ### */
+
+/* IF YOU USE SHINY'S TYPICAL INPUTS, THIS RULE AFFECTS THEIR DEFAULT STYLING. HERE, I HAVE THE FONT CHANGING TO BLACK, ALIGNING LEFT, GETTING A LITTLE SMALLER, AND APPLYING SOME LEFT AND RIGHT BUFFER TO KEEP THE FONT FROM CLIPPING THE EDGES. */
+.shiny-input-container, .shiny-bound-input {
+  color: black;
+  text-align: left;
+  font-size: 95%;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+/* THIS RULE APPLIES TO ANY SELECTINPUTS THAT GET DROPDOWN MENUS. THIS SETS THEIR FONT AND BACKGROUND COLORS TO BE MORE READABLE. */
+div.dropdown-menu {
+  color: black; 
+  background-color: #FAFAFA;
+}
+
+/* BY DEFAULT, LONG MENU ITEMS IN A SELECTINPUT WILL NOT LINE-BREAK. THIS RULE WOULD ALLOW YOU TO ADJUST THIS BEHAVIOR. */
+select.form-control>option {
+  white-space: break-spaces;
+}
+
+/* IF YOU HAVE ANY SELECTINPUTS OR SELECTIZEINPUTS THAT ARE NEAR THE BOTTOMS OF CONTAINERS, THIS WILL FORCE THEM TO TAKE UP SOME AMOUNT OF SPACE NO MATTER WHAT SO THAT YOU WON'T HAVE TO SCROLL DOWN TO SEE THEIR CONTENTS WHEN THEY OPEN. */
+.selectize-dropdown {
+        min-height: 100px;
+        overflow-y: auto;
+}
+
+/* BUTTONS ARE EXTREMELY COMMON APP ELEMENTS. THIS RULE SETS THEIR BORDER TO BLACK, THEIR COLOR TO RED (OVERRIDING THE DEFAULT), THEIR FONT SIZE TO 100% (ALSO OVERRIDING A DEFAULT) AND THEIR FONT WEIGHT TO BOLD FOR EMPHASIS. */
+button.btn-default {
+  background-color: #FAFAFA; 
+  color: #7a0019; 
+  min-width: 320px;
+  height: 41.225px;
+  white-space: normal;
+  border-color: black; 
+  border-width: 2px; 
+  text-align: center;
+  font-weight: bold;
+  text-decoration: none !important;
+  font-size: 100%;
+}
+
+/* IF YOU USE SHINYJS TO DISABLE BUTTONS, THIS RULE APPLIES TO WHAT THOSE BUTTONS WILL LOOK LIKE DISABLED. THIS WILL TURN THEIR FONT COLOR TO GRAY, WHICH IS A TYPICAL SIGNAL THAT THE BUTTON IS DISABLED. */
+button.btn.disabled {
+  color: gray;
+}
+
+/* HERE'S WHERE YOU'D CODE WHAT WOULD CHANGE ABOUT A BUTTON IF IT WERE HOVERED OVER. */
+button:hover {
+  background-color: #900021;
+  color: white }
+  
+  /* IF YOU USE THE DEFAULT DATE INPUT, THIS FORCES THE RESULTING WINDOW TO DEFINITELY HOVER ABOVE ALL OTHER ON-SCREEN CONTENT. */
+div.datepicker {
+  z-index: 1000 !important;
+}
+
+/* IF YOU USE ANY CHECKBOX-STYLE INPUTS, THIS RULE WILL ADJUST THE APPEARANCE OF THE ACTUAL CHECKBOX ITSELF. */
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+
+
+
+/* ### ADJUSTING DT TABLES ### */
+
+/* THIS RULE AFFECTS ANY DT TABLES INCLUDED IN THE APP. HERE, I SET THE BACKGROUND TO OFFWHITE, THE FONT TO BLACK, THE FONT SIZE TO A BIT SMALLER, AND ADD SOME PADDING AND MARGINING. */
+div.datatables {
+  background-color: #FAFAFA;
+  color: black;
+  padding: 2% 2% 2% 2%;
+  margin-bottom: 2%;
+  font-size: 80%;
+}
+
+
+
+/* ### CONVENIENCE CLASSES FOR QUICK, COMMON AESTHETIC CHANGES ### */
+
+/* THE FOLLOWING SEVERAL CLASSES CAN BE USED TO ACHIEVE SOME COMMON APPEARANCE ADJUSTMENTS */
+.flexthis {
+  display: flex;
+}
+
+.flexcol {
+  flex-direction: column;
+}
+
+.width100 {
+  width: 100%;
+}
+
+.justifycenter {
+  justify-content: center;
+}
+
+.flexwrap {
+  flex-wrap: wrap;
+}
+
+.autoleftrightmarg {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.flexend {
+  align-items: flex-end;
+}
+
+.centertext {
+  text-align: center;
+}
+
+.boldthis {
+  font-weight: bold;
+}
+
+.italicize {
+  font-style: italic;
+}
+
+
+
+/* ### MEDIA QUERIES ### */
+
+/* THE FOLLOWING IS JUST AN EXAMPLE OF A MEDIA QUERY, WHICH CAN BE USED TO CONDITIONALLY APPLY STYLING WHEN ON CERTAIN DEVICES OR WHEN THE USER'S SCREEN IS A CERTAIN SIZE. */
+@media (max-width: 767px) {
+
+}
+
+
+
+/* ### ADJUSTING LEAFLET MAPS ### */
+
+/* ON LEAFLET MAPS, THE ZOOM-IN/ZOOM-OUT BUTTONS ARE FREQUENTLY TOO DIM TO HAVE SUFFICIENT CONTRAST. THIS FIXES THAT. */
+a.leaflet-control-zoom-out, a.leaflet-control-zoom-in {
+  color: #8C8C8C !important;
+}
