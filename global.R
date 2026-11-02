@@ -53,7 +53,7 @@ source("Rcode/Scripts/shinyConvenienceFunctions.R")
 dows_lakenames_counties = read.csv("inputs/Static/dows_lakenames_counties.csv", colClasses = "character")
 
 #AN OUTLINE OF THE STATE OF MINNESOTA FOR MAPS.
-# MN = readRDS("inputs/Static/MN") 
+MN = readRDS("inputs/Static/MN") 
 
 IWL = read.csv("inputs/Dynamic/infestedWaters_cleanedNInclusive.csv") %>% 
   filter(!is.na(DOW)) 
@@ -155,10 +155,14 @@ IWL_allSources = bind_rows(IWL_sf, piCharterSupp_sf)
 
 
 #MN PUBLIC ACCESS LOCATIONS
-pub_accesses = read_sf("upstream/UpstreamInputs/shor_waspt3.shp") %>% 
-  st_drop_geometry() %>% 
-  select(DOW = DOWLKNUM) %>% 
-  filter(!is.na(DOW))
+# pub_accesses = read_sf("upstream/UpstreamInputs/shor_waspt3.shp") %>%
+#   st_drop_geometry() %>%
+#   select(DOW = DOWLKNUM) %>%
+#   filter(!is.na(DOW))
+# 
+# saveRDS(pub_accesses, "inputs/Static/pub_accesses.rds")
+
+pub_accesses = readRDS("inputs/Static/pub_accesses.rds")
 
 pub_accesses$DOW = paste0(str_sub(pub_accesses$DOW, 1, 6), "00")
 

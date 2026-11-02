@@ -189,15 +189,13 @@ form {
 /* FOR ACCESSIBILITY, THE FIGURE AND FIGCAPTION SEMANTIC TAGS ARE TO BE USED FOR EVERY FIGURE. THIS RULE WOULD ADJUST THE APPEARANCE OF ALL FIGURE CAPTIONS. */
 figcaption {
   color: #545454;
-  font-style: italic;
-  font-size: 80%;
+  font-size: 90%;
 }
 
 /* THIS IS THE SAME BUT FOR THE CAPTION TAGS OFTEN USED BY DT TABLES INSTEAD. */
 caption {
   color: #545454; 
-  font-style: italic;
-  font-size: 100%;
+  font-size: 90%;
 }
 
 /* TO MEET ACCESSIBILITY REQUIREMENTS, CONTACT INFO IS SUPPOSED TO BE HOUSED IN AN ADDRESS SEMANTIC TAG. THIS RULE WOULD ADJUST THE APPEARANCE OF ALL SUCH TAGS. */
@@ -320,6 +318,10 @@ div.datatables {
   flex-wrap: wrap;
 }
 
+
+#infest_graph_div {
+  max-width: 80%;
+}
 .autoleftrightmarg {
   margin-left: auto;
   margin-right: auto;

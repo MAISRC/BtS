@@ -36,9 +36,10 @@ shinyServer(function(input, output, session) {
              "Confirmed year(s): ", IWF_summs$all_confirmed_years[x], "<br>")
     })
 
+    bbox = unname(st_bbox(MN))
     
     leaflet(data = IWF_summs) %>% 
-      addTiles() %>% 
+      addTiles(options = leaflet::providerTileOptions(minZoom = 6, maxZoom = 15)) %>% 
       addCircleMarkers(lat = ~lat, 
                        lng = ~lng,
                        radius = 5, 
@@ -51,7 +52,14 @@ shinyServer(function(input, output, session) {
                        fillColor = "#7A0019", 
                        fillOpacity = 0.5,
                        label = ~lapply(labels, HTML)
-                      )
+                      ) %>% 
+      addPolygons(data = MN$geometry,
+                  stroke = T,
+                  color = "black",
+                  weight = 3, 
+                  opacity = 1, 
+                  fill = F) %>% 
+      setMaxBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4])
     
   })
   
