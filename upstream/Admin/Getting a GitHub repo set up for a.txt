@@ -1,7 +1,0 @@
-Getting a GitHub repo set up for a R Shiny Project:
-1. Git is installed for Windows/RStudio.
-2. Make a GitHub repo for the project.
-3. Copy the URL for the repo.
-4. Go to Tools, Project Tools, Git in RStudio and enable Version Control via Git (forces a restart of RStudio).
-5. At RStudio Terminal, use git remote add origin [URL], no brackets.
-6. Verify connection with git remove -v. 

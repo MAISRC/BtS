@@ -1,1 +1,0 @@
-Input files that are expected to change very regularly are stored in this folder. 

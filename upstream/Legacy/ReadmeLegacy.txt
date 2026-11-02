@@ -1,1 +1,0 @@
-This folder is where I would recommend storing code that was old or experimental and is not currently in use but that "feels bad" to delete outright. Maybe it will have some future use, or maybe it'll be useful once it's developed further. Plus, maybe it needs to be preserved as a reference point for how some previous system or approach was utilized.

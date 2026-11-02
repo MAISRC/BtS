@@ -10,9 +10,10 @@ library(waiter) #WAITERS, SPINNERS, AND PRELOADERS.
 library(shinydisconnect) #CUSTOM DISCONNECT SCREEN.
 library(viridis) #COLORBLIND-FRIENDLY PALETTES
 library(shinyWidgets) #FOR IMPROVED INPUTS. 
-# library(plotly) #PLOTLY GRAPHS
-# library(sf) #WORKING W/ SPATIAL DATA FOR MAPS (IF USING LEAFLET)
-# library(leaflet) #LEAFLET MAPS
+library(plotly) #PLOTLY GRAPHS
+library(sf) #WORKING W/ SPATIAL DATA FOR MAPS (IF USING LEAFLET)
+library(leaflet) #LEAFLET MAPS
+library(lubridate) #WORKING WITH DATES
 # library(gargle) #GOOGLE DRIVE AUTHETICATION.
 # library(googledrive) #GOOGLE DRIVE INTERACTIONS.
 # library(googlesheets4) #GOOGLE SHEETS INTERACTIONS.
@@ -43,35 +44,174 @@ library(shinyWidgets) #FOR IMPROVED INPUTS.
 
 # ### LOAD MODULES ### ----------------------------------------------------
 
-#IF YOU HAVE MODULARIZED THE APP, LOAD THE MODULE FILES HERE.
-
-# source("Rcode/Modules/ExampleServer.R")
-# source("Rcode/Modules/ExampleUI.R")
-
 #  ### ESTABLISH CONVENIENCE FUNCTIONS ### --------------------------------
-
-#I HAVE SEVERAL CONVENIENCE FUNCTIONS THAT I OFTEN SEEM TO NEED IN MY SHINY APPS. I'VE STORED THESE IN A SINGLE FILE THAT I SOURCE HERE. ANY MORE "NICHE" ONES I WRITE OUT HERE.
 
 source("Rcode/Scripts/shinyConvenienceFunctions.R")
  
 
 # ### LOAD NECESSARY INPUTS ### -------------------------------------------
-
-#MOST SHINY APPS DEPEND UPON AT LEAST SOME OUTSIDE DATA. LOAD THAT HERE. I'VE INCLUDED SOME THINGS HERE I REGULARLY NEED--DELETE ANY THAT ARE IRRELEVANT AND REMOVE THE RESPECTIVE FILES FROM THE INPUTS FOLDER.
-
-#I SO REGULARLY NEED TO KNOW THE NAMES/DOWS/COUNTIES OF LAKES IN MN THAT I'VE COMBINED ALL THAT INTO A SINGLE DF, LOADED HERE.
 dows_lakenames_counties = read.csv("inputs/Static/dows_lakenames_counties.csv", colClasses = "character")
-
-#THIS OBJECT IS A LIST OF ALL THE LAKE DOWS THAT ARE ON TRIBAL LANDS IN THE STATE.
-# tribal_DOWs = readRDS("inputs/Static/tribal_DOWs.rds") 
 
 #AN OUTLINE OF THE STATE OF MINNESOTA FOR MAPS.
 # MN = readRDS("inputs/Static/MN") 
 
-#HERE IS SOME SAMPLE CODE FOR GETTING THE SHEET ID FOR A GOOGLE SHEET, IN CASE YOU NEED TO "TALK" TO ONE. 
- # metadata_id = googledrive::drive_get("[SHARING LINK]")$id
+IWL = read.csv("inputs/Dynamic/infestedWaters_cleanedNInclusive.csv") %>% 
+  filter(!is.na(DOW)) 
 
+IWL$DOW = as.character(IWL$DOW)
+IWL$DOW[nchar(IWL$DOW) == 7] = paste0("0", IWL$DOW[nchar(IWL$DOW) == 7])
+
+wb_polys_all = readRDS("inputs/Static/LAKE_POLY") %>% 
+  rename(DOW = dowlknum) 
+
+wb_polys = wb_polys_all %>% 
+  select(DOW, center_utm, center_u_1) %>% 
+  distinct(DOW, .keep_all = T)
+
+wb_polys$DOW = as.character(wb_polys$DOW)
+wb_polys$DOW[nchar(wb_polys$DOW) == 7] = paste0("0", wb_polys$DOW[nchar(wb_polys$DOW) == 7])
+
+wb_polys$DOW = paste0(str_sub(wb_polys$DOW, 1, 6), "00") 
+IWL$DOW = paste0(str_sub(IWL$DOW, 1, 6), "00") 
+
+wb_polys = wb_polys %>% 
+  distinct(DOW, .keep_all = T)
+
+IWL_sf = left_join(IWL, wb_polys, relationship = "many-to-one")
+IWL_sf = st_as_sf(IWL_sf, crs = 26915, coords = c("center_utm", "center_u_1"))
+IWL_sf = st_transform(IWL_sf, crs = 4326)
+IWL_sf$longs = st_coordinates(IWL_sf)[,1]
+
+IWL_sf = IWL_sf %>% 
+  filter(longs < -50)
+
+#SOME OF THESE DIDN'T GET COUNTY INFO FOR SOME REASON
+IWL_sf$counties[IWL_sf$DOW == "27000300"] = "Hennepin"
+IWL_sf$counties[IWL_sf$DOW == "19000500"] = "Dakota"
+IWL_sf$counties[IWL_sf$DOW == "25001700"] = "Goodhue"
+IWL_sf$counties[IWL_sf$DOW == "79000500"] = "Wabasha"
+IWL_sf$counties[IWL_sf$DOW == "79000100"] = "Wabasha"
+IWL_sf$counties[IWL_sf$DOW == "85001300"] = "Winona"
+IWL_sf$counties[IWL_sf$DOW == "85000200"] = "Winona"
+IWL_sf$counties[IWL_sf$DOW == "85000100"] = "Winona"
+IWL_sf$counties[IWL_sf$DOW == "28000500"] = "Houston"
+IWL_sf$counties[IWL_sf$DOW == "28000100"] = "Houston"
+
+#AT THIS POINT, PROBABLY DUE TO SUBBASIN COLLAPSING, THERE ARE SOME DUPES WE CAN REMOVE.
+IWL_sf = IWL_sf %>% 
+  group_by(DOW, species) %>% 
+  distinct(DOW, species, .keep_all = TRUE)
+
+IWL_sf$source = "MN DNR's Infested Waters List"
+
+#LOAD IN PI CHARTER SUPPLEMENTAL FOR AQUATIC PLANTS
+piCharterSupp = read.csv("inputs/MadeUpstream/PI_Charter_Positives.csv") %>% 
+  select(-X)
+
+piCharterSupp$DOW = as.character(piCharterSupp$DOW)
+piCharterSupp$DOW[nchar(piCharterSupp$DOW) == 7] = paste0("0", piCharterSupp$DOW[nchar(piCharterSupp$DOW) == 7])
+
+piCharterSupp$taxon = tolower(piCharterSupp$taxon)
+
+piCharterSupp$taxon[piCharterSupp$taxon == "hybrid water-milfoil"] = "eurasian water-milfoil" #***LUMPING THE HYBRIDS TOGETHER FOR SIMPLICITY.
+piCharterSupp$taxon[piCharterSupp$taxon == "hybrid cattail"] = "narrow-leaved cattail" 
+
+piCharterSupp = piCharterSupp %>% 
+  group_by(DOW, taxon) %>% 
+  suppressWarnings(summarize(FIRST_YEAR = first(year(as_date(SURVEY_START))),
+                             .groups = "drop_last")) %>% 
+  ungroup()
+
+piCharterSupp$taxon[piCharterSupp$taxon == "curly pondweed"] = "curly-leaf pondweed"
+piCharterSupp$taxon[piCharterSupp$taxon == "eurasian water-milfoil"] = "Eurasian watermilfoil"
+
+piCharterSupp$source = "P.I. Charter Database"
+
+wb_polys_all = wb_polys_all %>% 
+  distinct(DOW, .keep_all = T)
+
+piCharterSupp_sf = left_join(piCharterSupp, wb_polys_all, relationship = "many-to-one")
+piCharterSupp_sf$center_u_1[piCharterSupp_sf$DOW == "19000500"] = 4964066 #STUPID LOCK AND DAM POOL 2 IS SCREWING ME OVER.
+piCharterSupp_sf$center_utm[piCharterSupp_sf$DOW == "19000500"] = 500000
+
+piCharterSupp_sf = st_as_sf(piCharterSupp_sf, crs = 26915, coords = c("center_utm", "center_u_1"))
+piCharterSupp_sf = st_transform(piCharterSupp_sf, crs = 4326)
+
+piCharterSupp_sf = piCharterSupp_sf %>% 
+  rename(confirmed_year_inc = FIRST_YEAR,
+         species = taxon,
+         wb_name = map_label,
+         counties = cty_name)
+
+#AT THIS POINT, PROBABLY DUE TO SUBBASIN COLLAPSING, THERE ARE SOME DUPES WE CAN REMOVE.
+piCharterSupp_sf = piCharterSupp_sf %>% 
+  group_by(DOW, species) %>% 
+  distinct(DOW, species, .keep_all = TRUE)
+
+piCharterSupp_sf$connected = FALSE
+
+IWL_allSources = bind_rows(IWL_sf, piCharterSupp_sf)
+
+
+
+#MN PUBLIC ACCESS LOCATIONS
+pub_accesses = read_sf("upstream/UpstreamInputs/shor_waspt3.shp") %>% 
+  st_drop_geometry() %>% 
+  select(DOW = DOWLKNUM) %>% 
+  filter(!is.na(DOW))
+
+pub_accesses$DOW = paste0(str_sub(pub_accesses$DOW, 1, 6), "00")
+
+pub_accesses = pub_accesses %>% 
+  distinct(DOW) %>%  
+  pull()
 
 # ### PRE-BAKE GLOBAL ENVIRONMENT OBJECTS ### -----------------------------
 
-#ANY OPERATIONS THAT CAN BE AVOIDED DURING APP OPERATION BY PERFORMING THEM ON LAUNCH ("PRE-BAKING") IMPROVES USER EXPERIENCE. IDEALLY, THESE WOULD BE FASHIONED UPSTREAM AND SIMPLY LOADED IN THE PREVIOUS SECTION, BUT SOMETIMES, THESE CHANGE OFTEN ENOUGH THAT IT'S MORE CONVENIENT TO DO THOSE OPERATIONS HERE, IF THEY ARE SPEEDY ENOUGH.
+spp_pal = viridis(
+  n = length(unique(IWL_allSources$species)) + 1,
+  option = "viridis"
+)
+
+names(spp_pal) = c(unique(IWL_allSources$species), "All")
+
+make_infest_graph = function(currDF) { #CURRDF HERE IS ALREADY SUMMARIZED
+  
+  currDF = dplyr::ungroup(currDF)
+  currDF = dplyr::arrange(currDF, species, confirmed_year_inc)
+  
+  currDF$tooltip_text = paste0(
+    "Year: ", currDF$confirmed_year_inc, "<br>",
+    "Taxon: ", currDF$species, "<br>",
+    "# new infestations: ", currDF$n
+  )
+  
+
+  
+  plot_ly(
+    data = currDF,
+    y = ~n,
+    x = ~confirmed_year_inc,
+    color = ~species,
+    colors = spp_pal,
+    type = "scatter",
+    mode = "lines",
+    hoverinfo = "text",
+    text = ~tooltip_text
+  ) %>%
+    layout(paper_bgcolor = 'white', 
+           plot_bgcolor = 'white',
+           xaxis = list(title = "<b>Year</b>",
+                        gridcolor = 'lightgrey', 
+                        linecolor = "black", 
+                        linewidth = 2, 
+                        tickfont = list(family = "Open Sans", color='black', size = 14),
+                        titlefont = list(family = "Open Sans", color="black", size = 18),
+                        fixedrange = TRUE), 
+           yaxis = list(title = "New confirmed infestations", 
+                        linecolor = "black", 
+                        linewidth = 2, 
+                        tickfont = list(family = "Open Sans", color='black', size = 14),
+                        fixedrange = TRUE
+           ))
+}

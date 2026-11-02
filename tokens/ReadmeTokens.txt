@@ -1,1 +1,0 @@
-This subfolder is for storing authentication files for connecting to Google Drive folders. Beyond setup performed in RStudio, this subfolder shouldn't be modified in any way, and only needs to exist if a connection to Google Drive is vital. 

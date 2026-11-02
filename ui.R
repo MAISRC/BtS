@@ -2,7 +2,7 @@
 ui = fluidPage(
   id = "whole_page",
   
-  title = "Browser tab title", #THIS IS THE TEXT THAT'LL GO IN THE BROWSER TAB FOR YOUR USER WHEN YOUR APP IS OPEN.
+  title = "Beating the Spread", #THIS IS THE TEXT THAT'LL GO IN THE BROWSER TAB FOR YOUR USER WHEN YOUR APP IS OPEN.
   
   tags$html(lang = "en"), #SET THE PAGE LANGUAGE TO ENGLISH FOR SCREEN READERS. MUST BE DONE AS "HIGH" IN THE APP STRUCTURE AS POSSIBLE!
   
@@ -12,7 +12,7 @@ ui = fluidPage(
   tags$head(tags$link(
     rel = "stylesheet", 
     type = "text/css",
-    href = "CSSTemplate.css" #OR WHATEVER YOU RENAME THIS FILE TO.
+    href = "BtSCSS.css" #OR WHATEVER YOU RENAME THIS FILE TO.
   ),
   
 
@@ -111,29 +111,99 @@ tags$header(
       img(src = "maisrc-black.png",
           alt = "MAISRC logo.",#THIS ALT SHOULD JUST BE THE TEXT SIGHTED PERSONS WOULD SEE HERE.
           style = "min-width: 320px;"),
-    #   img(src = "PIlogocrop.png",
-    #       alt = "P.I. Charter.",#THIS ALT SHOULD JUST BE THE TEXT SIGHTED PERSONS WOULD SEE HERE.
-    #       style = "min-width: 320px;")
-    # ),
+      img(src = "beating-the-spread.png",
+          alt = "Beating the Spread",#THIS ALT SHOULD JUST BE THE TEXT SIGHTED PERSONS WOULD SEE HERE.
+          style = "min-width: 320px;")
+    ),
 ), 
     #IF THERE'S A NAV BAR IN THE HEADER, IT SHOULD BEAR THIS SEMANTIC TAG.
     class = "flexthis flexcol width100 justifycenter flexwrap",
     tags$nav( 
                          
       class = "flexthis flexwrap justifycenter",
-                     )
-                    )
+   )
 ),
 
 
 ## ### MAIN CONTENT/MODULES ### --------------------------------------------
 
-#PUT YOUR APP'S MAIN CONTENT HERE. 
-# 
-# exampleUI(), #IF YOU HAVE YOUR UI/SERVER FILES MODULARIZED, HERE IS WHERE YOU MIGHT OPEN THE MODULES.
+tags$main(
+  id = "map_main",
+  
+leafletOutput("infest_map", width = "50%", height = "450px"),
 
-textOutput("sampleText"),
+tags$fieldset(
+  tags$legend("Control which infestations are mapped"),
+  
+  fluidRow(
+    style = "width: 100%;",
+    
+    column(width = 4, offset = 2, 
+           
+           pickerInput("infest_spp", 
+                       label = "Invader(s)",
+                       choices = sort(unique(IWL_allSources$species)), 
+                       selected = unique(IWL_allSources$species), 
+                       multiple = TRUE, 
+                       options = pickerOptions(actionsBox = TRUE, 
+                                               selectedTextFormat = "count > 2",
+                                               countSelectedText = "{0} selected"
+                       )
+           ),
+           
+           
+           pickerInput("infest_ctys", 
+                       label = "County(ies)",
+                       choices = sort(unique(IWL_allSources$counties[!grepl(",", IWL_allSources$counties)])), 
+                       selected = unique(IWL_allSources$counties[!grepl(",", IWL_allSources$counties)]), 
+                       multiple = TRUE, 
+                       options = pickerOptions(actionsBox = TRUE, 
+                                               selectedTextFormat = "count > 2",
+                                               countSelectedText = "{0} selected"
+                       )
+           ),
+           
+           pickerInput("infest_source", 
+                       label = "Source database(s)",
+                       choices = sort(unique(IWL_allSources$source)), 
+                       selected = unique(IWL_allSources$source), 
+                       multiple = TRUE, 
+                       options = pickerOptions(actionsBox = TRUE, 
+                                               selectedTextFormat = "count > 2",
+                                               countSelectedText = "{0} selected"
+                       )
+           )
+           
+    ), #END FIRST COL
+    
+    column(width = 4, offset = 0, 
+  
+  sliderInput("infest_years", 
+              label = "Year confirmed", 
+              min = min(IWL_allSources$confirmed_year_inc, na.rm=T), 
+              max = max(IWL_allSources$confirmed_year_inc, na.rm=T), 
+              step = 1, 
+              value = c(min(IWL_allSources$confirmed_year_inc, na.rm=T), max(IWL_allSources$confirmed_year_inc, na.rm=T)),
+              sep = ""
+                ),
+  
+  checkboxInput("exclude_conns", 
+                label = "Exclude records listed due to water connections, not independent confirmations (by state statute, waterbodies connected to infested waterbodies are treated as infested, and independent confirmation is rare)", 
+                value = FALSE),
+  
+  checkboxInput("exclude_noaccess", 
+                label = "Exclude records from waterbodies without public accesses", 
+                value = FALSE),
 
+    ) #END SECOND COL
+  
+  ) #END FLUID ROW
+ 
+ ),
+
+plotlyOutput("infest_graph", width = "80%", height = "500px")
+
+), #END MAIN
 
 ## ### FOOTER ### ----------------------------------------------------------
 
