@@ -360,3 +360,16 @@ div.datatables {
 a.leaflet-control-zoom-out, a.leaflet-control-zoom-in {
   color: #8C8C8C !important;
 }
+
+
+#saturation_percentage {
+  font-size: 500%;
+  color: #900021;
+}
+
+#saturation_div {
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}

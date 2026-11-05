@@ -14,6 +14,11 @@ library(plotly) #PLOTLY GRAPHS
 library(sf) #WORKING W/ SPATIAL DATA FOR MAPS (IF USING LEAFLET)
 library(leaflet) #LEAFLET MAPS
 library(lubridate) #WORKING WITH DATES
+library(httr) #THESE FOUR, FOR READING IN AND PROCESSING THE IWL.
+library(readr)
+library(readxl)
+library(knitr)
+
 # library(gargle) #GOOGLE DRIVE AUTHETICATION.
 # library(googledrive) #GOOGLE DRIVE INTERACTIONS.
 # library(googlesheets4) #GOOGLE SHEETS INTERACTIONS.
@@ -55,12 +60,53 @@ dows_lakenames_counties = read.csv("inputs/Static/dows_lakenames_counties.csv", 
 #AN OUTLINE OF THE STATE OF MINNESOTA FOR MAPS.
 MN = readRDS("inputs/Static/MN") 
 
-IWL = read.csv("inputs/Dynamic/infestedWaters_cleanedNInclusive.csv") %>% 
+#DEFINITIVE LIST OF INVASIVES
+allInvasivesList = read.csv("inputs/Static/invasives_list_revised_2026.csv")
+
+
+# polys = read_sf("H:\\Shared drives\\MAISRC\\Quantification, Data, and Computation\\Projects\\Hansen lab EWM SDM Project\\Hansen EWM Viz\\data\\dnr_hydro_features_all.shp")
+# 
+# polys = polys %>%
+#   filter(!is.na(dowlknum), outside_mn != "Y") %>%
+#   rename(DOW = dowlknum) %>%
+#   select(DOW, geometry, counties = cty_name, wb_name = map_label, center_utm, center_u_1) %>%
+#   st_simplify(preserveTopology = TRUE,
+#               dTolerance = 50) %>%
+#   st_transform(crs = 4326)
+# 
+# saveRDS(polys, "inputs/Static/allMNlakepolygons.rds")
+
+polys = readRDS("inputs/Static/allMNlakepolygons.rds")
+
+
+
+##GRAB AND RUN THE LATEST VERSION OF THE MNDNR IWL CLEANING CODE FROM MY GITHUB
+url = "https://raw.githubusercontent.com/MAISRC/MNDNR_IWL/refs/heads/main/MNDNR_IWF_Transformation.qmd"
+
+#REQUIRES TEMPORARILY WRITING PLAIN VERSIONS OF THE QMD FILE AND THE R CODE IN IT
+qmd_file = tempfile(fileext = ".qmd")
+r_file = tempfile(fileext = ".R")
+
+download.file(url, destfile = qmd_file, mode = "wb")
+
+# PURL TRANSFERS JUST THE R CODE OVER TO A NEW FILE TO BE SOURCED.
+knitr::purl(
+  input = qmd_file,
+  output = r_file,
+  documentation = 0,
+  quiet = TRUE
+)
+
+#THEN, RUN THAT R CODE TO PRODUCE THE FILE THE APP WANTS.
+source(r_file, local = TRUE)
+
+IWL = read.csv("infestedWaters_cleanedNInclusive.csv") %>% 
   filter(!is.na(DOW)) 
 
 IWL$DOW = as.character(IWL$DOW)
 IWL$DOW[nchar(IWL$DOW) == 7] = paste0("0", IWL$DOW[nchar(IWL$DOW) == 7])
 
+#****SWAP TO USING THE ALL-ENCOMPASSING POLYS OBJ ABOVE.
 wb_polys_all = readRDS("inputs/Static/LAKE_POLY") %>% 
   rename(DOW = dowlknum) 
 
@@ -170,17 +216,73 @@ pub_accesses = pub_accesses %>%
   distinct(DOW) %>%  
   pull()
 
+
+NAS = read.csv("C:\\Users\\Bajcz\\Downloads\\NAS-Data-Download-11-05-2026-23727\\NAS-Specimen-Download.csv")
+
+overlaps = intersect(x = NAS$Scientific.Name, allInvasivesList$scientific)
+
+NAS_filtered = NAS %>% 
+  filter(Scientific.Name %in% overlaps) %>% 
+  filter(!is.na(Latitude), !is.na(Longitude), Latitude >= 43, Latitude <= 49, Longitude <= -89, Longitude >= -97)
+
+NAS_sf = st_as_sf(NAS_filtered, crs = 4326, coords = c("Longitude", "Latitude"))
+
+
+NAS_matches = NAS_sf[lengths(st_intersects(NAS_sf, polys)) > 0, ]
+
+NAS_joined = st_join(NAS_matches, polys)
+
+NAS_svelte = NAS_joined %>% 
+  select(Scientific.Name, DOW, geometry, confirmed_year_inc = Date.1, wb_name, counties, center_utm, center_u_1) %>% 
+  st_drop_geometry() %>% 
+  mutate(DOW = paste0(str_sub(DOW, 1, 6), "00")) %>% 
+  distinct(Scientific.Name, DOW, confirmed_year_inc, center_utm, center_u_1) %>% 
+  filter(!is.na(confirmed_year_inc))
+
+NAS_svelte$source = "Nonindigenous Aquatic Species (NAS) Database"
+NAS_svelte$connected = FALSE
+
+sci2common = allInvasivesList$common
+names(sci2common) = allInvasivesList$scientific
+NAS_svelte$species = sci2common[NAS_svelte$Scientific.Name]
+NAS_svelte$Scientific.Name = NULL
+NAS_svelte$species[!NAS_svelte$species %in% c("Chinese mystery snail", "Eurasian watermilfoil","New Zealand mudsnail", "European valve snail")] = tolower(NAS_svelte$species[!NAS_svelte$species %in% c("Chinese mystery snail", "Eurasian watermilfoil","New Zealand mudsnail", "European valve snail")])
+NAS_svelte$species[NAS_svelte$species == "New Zealand mudsnail"] = "New Zealand mud snail"
+NAS_svelte$species[NAS_svelte$species == "yellow iris"] = "yellow flag"
+NAS_svelte$species[NAS_svelte$species == "hybrid cattail"] = "narrow-leaved cattail" #***CONTROVERSIAL
+
+NAS_svelte$DOW = as.character(NAS_svelte$DOW)
+
+NAS_sf_new = st_as_sf(NAS_svelte, crs = 26915, coords = c("center_utm", "center_u_1")) 
+NAS_sf_new = st_transform(NAS_sf_new, crs = 4326)
+
+IWL_allSources = bind_rows(IWL_allSources, NAS_sf_new) %>% 
+  select(-wb_location_details, -DOW_withSubbasin, -year_listed, confirmed_year_basis, year_or_connected_wb, -confirmed_year, -longs)
+
 # ### PRE-BAKE GLOBAL ENVIRONMENT OBJECTS ### -----------------------------
 
-spp_pal = viridis(
+rares = IWL_allSources %>% 
+  group_by(species) %>% 
+  summarize(n = n()) %>% 
+  filter(n < 8) %>% 
+  pull(species)
+
+spp_pal_all = viridis(
   n = length(unique(IWL_allSources$species)) + 1,
   option = "viridis"
 )
 
-names(spp_pal) = c(unique(IWL_allSources$species), "All")
+names(spp_pal_all) = c(unique(IWL_allSources$species), "All")
 
-make_infest_graph = function(currDF) { #CURRDF HERE IS ALREADY SUMMARIZED
-  
+spp_pal_one = viridis(
+  n = length(unique(IWL_allSources$species)),
+  option = "viridis"
+)
+
+names(spp_pal_one) = unique(IWL_allSources$species)
+
+make_infest_graph = function(currDF, pal2use) { #CURRDF HERE IS ALREADY SUMMARIZED
+
   currDF = dplyr::ungroup(currDF)
   currDF = dplyr::arrange(currDF, species, confirmed_year_inc)
   
@@ -197,9 +299,9 @@ make_infest_graph = function(currDF) { #CURRDF HERE IS ALREADY SUMMARIZED
     y = ~n,
     x = ~confirmed_year_inc,
     color = ~species,
-    colors = spp_pal,
+    colors = pal2use,
     type = "scatter",
-    mode = "lines",
+    mode = "lines+markers",
     hoverinfo = "text",
     text = ~tooltip_text
   ) %>%

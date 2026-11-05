@@ -1,0 +1,473 @@
+---
+title: "Processing the Minnesota Department of Natural Resources Infested Waters List for Programmatic Work and Data Analysis"
+author: "Dr. Alex Bajcz, Quantitative Ecologist for the Minnesota Aquatic Invasive Species Research Center at the University of Minnesota"
+date: today
+output: html_document
+---
+
+*VERSION 1.0.3. OCT. 30TH 2026.*
+
+This document contains all the code needed to recreate Dr. Alex Bajcz' transformation of the MN DNR's Infested Waters List document for use in programmatic work and data analysis. This is a key file for Aquatic Invasive Species (AIS) research and management work in the state, so being able to produce a fully machine-readable and analysis-ready version of it is essential for many workflows.
+
+## First, we load all required libraries.
+
+```{r load packages, message = F}
+library(readxl) #FOR READING THE DOWNLOADED EXCEL FILE
+library(readr) #FOR EXPORTING WITH MORE CHARACTER FLEX.
+library(httr) #FOR DOWNLOADING THE DATA FILE DIRECTLY
+library(dplyr) #FOR CORE DATA-WRANGLING VERBS.
+library(stringr) #FOR MANIPULATING STRING (TEXT) DATA
+```
+
+## Next, we load the Minnesota Department of Natural Resources (MN DNR)'s most recent version of the Infested Waters List.
+
+This document is available, as a Microsoft Excel file, [from this website](https://www.dnr.state.mn.us/invasives/ais/infested.html).
+
+```{r downloadIWL, message = F}
+url = "https://files.dnr.state.mn.us/eco/invasives/infested-waters.xlsx" #ESTABLISH THE URL FOR THE EXCEL FILE.
+
+temp_file = tempfile(fileext = ".xlsx") #ESTABLISH TEMP SPACE TO DOWNLOAD THE FILE INTO.
+
+httr::GET(url, 
+    httr::write_disk(temp_file, 
+                     overwrite = TRUE)) #DOWNLOAD THE FILE INTO THAT SPACE.
+
+# 4. Read the Excel sheet
+infestedWaters = readxl::read_excel(temp_file, #THEN READ IT IN.
+                            skip = 1, #SKIP THE FIRST NON-DATA CONTAINING ROW
+) %>% 
+  dplyr::select(-Column1) #REMOVE ERRANT LAST COLUMN.
+```
+
+This document has some machine-readability issues that make it difficult to work with programmatically.
+
+First, the DOW numbers for each lake (the lake's unique identifier in state records) are formatted differently in this document than in other state documents, mainly in that they contain hyphens. We'll remove these in a new column while coercing all text-based values in this column to `NA`s:
+
+```{r remove hyphens}
+infestedWaters$DOW_repaired = gsub("-", "", infestedWaters$`DOW number`) 
+infestedWaters$DOW_repaired = gsub("\u00A0", "", infestedWaters$DOW_repaired)
+infestedWaters$DOW_repaired = trimws(infestedWaters$DOW_repaired) #TRIM ANY TRAILING/NON-BREAKING SPACES AT THE SAME TIME.
+
+#CONVERT TO NUMERIC, THEN BACK TO CLEAR OUT ANY REMAINING TEXT-BASED ENTRIES.
+infestedWaters$DOW_repaired = as.character(suppressWarnings(as.numeric(infestedWaters$DOW_repaired)))
+```
+
+DOWs are 8-digit codes in their most standardized form. However, the leading "0" sometimes gets omitted from those that are meant to start with "0" plus a non-zero digit. Additionally, one or two "0"s occasionally get omitted from the end, where subbasin codes would go. So, we'll append leading/trailing `"0"`s until we get to 8 characters:
+
+```{r add leading 0s}
+add1 = which(nchar(infestedWaters$DOW_repaired) == 7)
+add2 = which(nchar(infestedWaters$DOW_repaired) == 6)
+add3 = which(nchar(infestedWaters$DOW_repaired) == 5)
+
+infestedWaters$DOW_repaired[add1] = paste0("0", infestedWaters$DOW_repaired[add1])
+infestedWaters$DOW_repaired[add2] = paste0( infestedWaters$DOW_repaired[add2], "00")
+infestedWaters$DOW_repaired[add3] = paste0("0", infestedWaters$DOW_repaired[add3], "00")
+```
+
+The last two digits of a DOW number identify sub-basins of large waterbodies. To consider just the waterbodies themselves in the DOW column, we can exclude any such sub-basin identifiers while still retaining those data elsewhere:
+
+```{r remove subbasins}
+#ESTABLISH NEW COLUMN, DOW_withSubbasin. 
+infestedWaters$DOW_withSubbasin = infestedWaters$DOW_repaired
+
+infestedWaters$DOW_repaired[!is.na(infestedWaters$DOW_repaired)] = paste0(stringr::str_sub(infestedWaters$DOW_repaired[!is.na(infestedWaters$DOW_repaired)], 1, 6), "00")
+```
+
+Next, we remove/rename other columns to ensure that all that remain are non-redundant and machine-readable:
+
+```{r IWL column work}
+infestedWaters = infestedWaters %>% 
+  dplyr::select(-`DOW number`) %>% #NO LONGER NEEDED.
+  dplyr::rename(wb_name = `Water body name`,
+         county = `County or counties`,
+         species = `Listed for aquatic invasive species`,
+         year_or_connected_wb = `Year species was first confirmed, or connected water body`,
+         DOW = DOW_repaired) %>% 
+  dplyr::filter(wb_name != "End of Worksheet") #THIS ROW WILL COME IN BUT CONTAINS NO DATA.
+```
+
+Here, we'll fix any remaining typos or idiosyncracies we can so far discover:
+
+```{r fixing typos}
+infestedWaters$species[infestedWaters$species == "Eurasian Watermilfoil"] = "Eurasian watermilfoil" #TYPO
+
+infestedWaters$year_or_connected_wb = gsub("conected", "connected", infestedWaters$year_or_connected_wb) #TYPO
+
+infestedWaters$year_or_connected_wb[infestedWaters$year_or_connected_wb %in% c("connected water", "NA", "year unknown")] = NA #REALLY, MISSING DATA INDICATORS. 
+
+infestedWaters$year_or_connected_wb[infestedWaters$year_or_connected_wb == "connected to Bemidji (04-0130_"] = "connected to Bemidji (04-0130)"
+infestedWaters$year_or_connected_wb[infestedWaters$year_or_connected_wb == "Connected to Potato (29-0243"] = "Connected to Potato (29-0243)"
+
+#HERE'S SOME CODE THAT HELPS IN LOOKING FOR THESE
+# look4typos = infestedWaters %>% mutate(across(everything(), as.factor))
+# summary(look4typos)
+# table(sort(look4typos$species)) #E.G.
+```
+
+It's worth noting that some records–mostly those for non-lakes or other waterbodies lacking DOWs–might be fairly considered "duplicate records" for analyses that count by rows. The following commands would explore/remove such records (not run by default):
+
+```{r removing potential dupes, eval = F}
+# noDOWs = infestedWaters %>% 
+#   dplyr::filter(is.na(DOW)) #PULL RECORDS WITH NO DOW VALUES.
+# 
+# infestedWaters = infestedWaters %>% 
+#   dplyr::filter(!is.na(DOW)) #REMOVE RECORDS WITH NO DOWS.
+# 
+# defDistinctRecords = infestedWaters %>% 
+#   dplyr::distinct(species, DOW, .keep_all = T) #REMOVE RECORDS THAT ARE DEFINITELY DISTINCT
+# 
+# posNonDistinctRecords = setdiff(infestedWaters, defDistinctRecords) #PULL RECORDS THAT ARE POTENTIALLY INDISTINCT
+```
+
+Currently, there is a column (`year_or_connected_wb`) that contains two distinct types of information:
+
+- The year the lake was *confirmed* to be infested (often distinct from the year it was listed), OR
+
+- The name(s) of the waterbody(ies) that became infested that are connected physically to the waterbody in the record.
+
+Because these are different data, it'd be practical to separate them:
+
+```{r better connected}
+infestedWaters$connected = FALSE #NEW COLUMN TO HOLD LAKES INFESTED VIA CONNECTIONS
+infestedWaters$connected[grepl(x = infestedWaters$year_or_connected_wb, 
+                               pattern = "connected|part of Jefferson chain", ignore.case = T)] = TRUE #RECOGNIZE BOTH CONNECTION DESCRIPTIONS (THE JEFFERSON CHAIN STRING DOESN'T CONTAIN CONNECTED SO WE HAVE TO REFER TO IT SPECIFICALLY)
+
+infestedWaters$confirmed_year = NA #NEW COLUMN TO HOLD CONFIRMED YEAR DATA.
+nonConnecteds = which(!infestedWaters$connected) #USE THE SAME CONNECTION RULE FOR YEAR EXTRACTION.
+
+infestedWaters$confirmed_year[nonConnecteds] = stringr::str_sub(infestedWaters$year_or_connected_wb[nonConnecteds],
+start = 1,
+end = 4) #WHEN A LAKE ISN'T INFESTED VIA A CONNECTION, EXTRACT THE FIRST FOUR CHARACTERS FROM THE OLD COLUMN, WHICH WILL BE THE 4-DIGIT YEAR DATA.
+
+infestedWaters$confirmed_year = suppressWarnings(as.numeric(infestedWaters$confirmed_year)) #MAKE THE NEW YEAR CONFIRMED COLUMN NUMERIC.
+```
+
+This is a start, but the `confirmed_year` column remains incomplete. For waterbodies that became listed as a result of a *connected* waterbody becoming infested, their "confirmed year" should be that of the waterbody they are said to be connected to.
+
+These two specific cases are pretty straightforward:
+
+```{r straightforward cases}
+infestedWaters$confirmed_year[infestedWaters$year_or_connected_wb == "connected - zebra mussels confirmed in Pomme de Terre River between Middle and North Pomme de Terre in 2018"] = 2018
+infestedWaters$confirmed_year[infestedWaters$year_or_connected_wb == "confirmed in Mississippi in 1990"] = 1990
+```
+
+However, uniting the rest of these disconnected data is a complicated endeavor because of the variety of ways this connectedness is indicated in the data set:
+
+```{r substrings to sort out}
+(substrings1 = unique(infestedWaters$year_or_connected_wb[is.na(infestedWaters$confirmed_year)]))
+```
+
+All these will need to be converted to a format that could be matched to another record in the table by DOW, where possible.
+
+To do that, we need to convert the remaining substrings, of the general format "connected to LAKE NAME (DOW #)" into a year that the LAKE in question was confirmed to be infested so that every record has a confirmed year of infestation.
+
+```{r storage obj }
+connected_df = data.frame(from = substrings1, to = NA, species = NA) #MAKE A STORAGE OBJECT TO HOLD THE CONVERSION DATA.
+```
+
+Several entries do not follow the exact general format articulated above but are unambiguous enough to be addressed "manually:"
+
+```{r unambiguous}
+connected_df$to[connected_df$from == "connected to Whitefish chain"] = 2014 
+connected_df$to[connected_df$from == "connected to Leech"] = 2016 
+connected_df$to[connected_df$from == "connected to Molly Stark and Annie Battle"] = 2018 
+connected_df$to[connected_df$from == "connected to Otter Tail and East Lost"] = 2016 
+connected_df$to[connected_df$from == "connected to Minnehaha Creek"] = 2016 
+connected_df$to[connected_df$from == "connected to Brophy"] = 2010 
+connected_df$to[connected_df$from == "connected to St. Louis River"] = 2014 
+connected_df$to[connected_df$from == "connected to Armour #2 mine"] = 2020 
+connected_df$to[connected_df$from == "part of Jefferson chain"] = 2002 
+connected_df$to[connected_df$from == "connected to Roy and Lower Cullen"] = 2010
+connected_df$to[connected_df$from == "connected to Rainy River"] = 2007 
+connected_df$to[connected_df$from == "connected to Mahnomen Mine Pit #1 and #2 (18-0440-01 and 18-0440-02)"] = 2017
+connected_df$to[connected_df$from == "connected to West Battle, Molly Stark and Annie Battle"] = 2016 #**2018 IS ALSO PLAUSIBLE HERE.
+
+#BECAUSE LAKES GET INFESTED WITH DIFFERENT SPECIES AT DIFFERENT TIMES, WE ALSO NEED TO KNOW WHICH SPECIES WE'RE TRYING TO MATCH BY.
+connected_df$species[connected_df$from == "connected to Whitefish chain"] = "zebra mussel"
+connected_df$species[connected_df$from == "connected to Leech"] = "zebra mussel" 
+connected_df$species[connected_df$from == "connected to Molly Stark and Annie Battle"] = "zebra mussel"
+connected_df$species[connected_df$from == "connected to Otter Tail and East Lost"] = "zebra mussel"
+connected_df$species[connected_df$from == "connected to Minnehaha Creek"] = "zebra mussel" 
+connected_df$species[connected_df$from == "connected to Brophy"] = "zebra mussel" 
+connected_df$species[connected_df$from == "connected to St. Louis River"] = "faucet snail"
+connected_df$species[connected_df$from == "connected to Armour #2 mine"] = "zebra mussel"
+connected_df$species[connected_df$from == "part of Jefferson chain"] = "Eurasian watermilfoil"
+connected_df$species[connected_df$from == "connected to Roy and Lower Cullen"] = "zebra mussel"
+connected_df$species[connected_df$from == "connected to Rainy River"] = "spiny waterflea"
+connected_df$species[connected_df$from == "connected to Mahnomen Mine Pit #1 and #2 (18-0440-01 and 18-0440-02)"] = "zebra mussel"
+connected_df$species[connected_df$from == "connected to West Battle, Molly Stark and Annie Battle"] = "zebra mussel"
+```
+
+There are a few similar cases to those above that involve multiple species and thus must be added across multiple rows:
+
+```{r multirow unambiguous}
+connected_df = rbind(connected_df,
+                     data.frame(
+                       from = rep("connected to Crow Wing River", 2),
+                       to = c(2009, 2010),
+                       species = c("faucet snail", "zebra mussel")
+                     )
+)
+
+connected_df = rbind(connected_df,
+                     data.frame(
+                       from = rep("connected to Mississippi River, Pool 2", 3),
+                       to = c(2012, 2015, 2015),
+                       species = c("bighead carp", "grass carp", "silver carp")
+                     )
+)
+
+connected_df = rbind(connected_df,
+                     data.frame(
+                       from = rep("connected to other Mississippi River pools" , 4),
+                       to = c(2012, 2015, 2015, 2016), #**THE 2016 HERE FOR FAUCET SNAIL IS A BIT AMBIGUOUS--2013 IS ALSO A PLAUSIBLE OPTION.
+                       species = c("bighead carp", "grass carp", "silver carp", "faucet snail")
+                     )
+)
+
+connected_df = rbind(connected_df,
+                     data.frame(
+                       from = rep("connected to Mississippi River" , 2),
+                       to = c(2006, 2015), #**THESE LOOK LIKE THE 2 LEAST CHARITABLE YEARS TO GO WITH FOR THIS ONE.
+                       species = c("zebra mussel", "grass carp")
+                     )
+)
+
+connected_df = connected_df %>% 
+  dplyr::filter_out(from %in% c("connected to Mississippi River",
+                         "connected to other Mississippi River pools",
+                         "connected to Mississippi River, Pool 2",
+                         "connected to Crow Wing River"),
+             is.na(to), is.na(species)) #GET RID OF THE OLD AND NOW LESS HELPFUL ENTRIES
+```
+
+For all the remaining, more formulaic substrings, we attempt to convert them into simply the DOW \# information contained inside their parentheticals:
+
+```{r to DOWs}
+connected_df = connected_df %>% 
+  dplyr::mutate(
+    sub = dplyr::if_else(is.na(to), as.character(sub(".*\\(([^)]*)\\).*", "\\1", from)), NA) 
+  ) #THIS WILL RECOGNIZE AND KEEP ONLY THE CONTENTS OF THE FIRST ENCOUNTERED PARENTHETICAL.
+```
+
+The next step is to convert these contents into DOWs that could match those elsewhere in the table:
+
+```{r matching DOW formatting}
+ignoreThese = which(is.na(connected_df$to) & grepl("\\(", connected_df$from))
+
+connected_df$sub[ignoreThese] = gsub("-", "", connected_df$sub[ignoreThese]) #REMOVE HYPHENS
+connected_df$sub[ignoreThese] = stringr::str_sub(connected_df$sub[ignoreThese], 1, 6) #GET ONLY FIRST 6 DIGITS
+connected_df$sub[ignoreThese] = paste0(connected_df$sub[ignoreThese], "00") #PASTE 00 ON THE END.
+
+connected_df$sub[nchar(connected_df$sub) == 7 & !is.na(connected_df$sub)] = 
+  paste0("0", connected_df$sub[nchar(connected_df$sub) == 7 & !is.na(connected_df$sub)]) #ADD LEADING 0S WHERE NEEDED TO GET TO 8 DIGITS.
+
+connected_df = connected_df %>% 
+  dplyr::filter_out(is.na(from)) #ELIM EMPTY ROW(S)
+```
+
+Now, for those waterbodies wherein we have a `sub` value and no `to` values, we do a loop to link these to the appropriate years and species (if we can):
+
+```{r match connected DOWs to years}
+easyMatches = connected_df$sub[!is.na(connected_df$sub) & connected_df$sub %in% infestedWaters$DOW] #THESE ARE THE DOWS THAT SHOULD BE EASY TO MATCH BECAUSE THEY ARE LISTED IN THE INFESTED WATERS LIST'S DOW COLUMN ALSO.
+
+for(i in 1:length(easyMatches)) { #FOR EACH OF THOSE...
+  
+  currDOW = easyMatches[i] #CURRENT DOW TO MATCH
+  
+  connDFmatches = which(connected_df$sub == currDOW & !is.na(connected_df$sub)) #WHICH ROW IN THE CONNECTED_DF MATCHES THE DOW WE'RE ON?
+  
+  #WHERE DOES THIS DOW STRING WE'RE TRYING TO FIND THE MATCH FOR SHOWS UP IN THE INFESTEDWATERS DOC AS THE ACTUAL INFESTED LAKE?
+  infInvolvedDOWs = which(infestedWaters$DOW == currDOW) 
+  
+  #WHICH SPECIES IS THAT LAKE LISTED FOR?
+  invSpp = unique(infestedWaters$species[infInvolvedDOWs])
+  
+  #FOR WHICH SPECIES DOES THIS PROBLEMATIC CONNECTED_WB SUBSTRING OCCUR FOR FOR THIS LAKE?
+  matchSpp = unique(infestedWaters$species[infestedWaters$year_or_connected_wb %in% as.vector(na.omit(unique(connected_df$from[connDFmatches])))])
+  
+  #SO, WHICH SPECIES ARE SHARED AND THUS FORM THE INTERSECTION? WE NEED TO MATCH FOR EACH OF THESE SPECIES.
+  intersectSpp = intersect(invSpp, matchSpp)
+  
+  numSpp = length(intersectSpp) #HOW MANY SPECIES IS THAT? 
+  
+  if(numSpp == 0) { #SKIP IF NO MATCHING SPP.
+    next
+  }
+  
+  #IF IT'S JUST ONE...
+  if(numSpp == 1) {
+    
+    connected_df$species[connDFmatches] = intersectSpp #STORE THAT ONE SPECIES
+    
+    #GRAB THE CONFIRMED_YEAR VALUE FOR WHEN THIS SPECIFIC DOW GOT CONFIRMED FOR THIS SPECIFIC SPECIES. 
+    attemptedReplacement = as.vector(na.omit(unique(infestedWaters$confirmed_year[infestedWaters$DOW == currDOW &
+                                                                                    infestedWaters$species == intersectSpp[1]])))
+    connected_df$to[connDFmatches] = ifelse(length(attemptedReplacement) == 1, attemptedReplacement, NA)
+    
+  } else {
+    
+    #GO SPECIES BY SPECIES THAT WE NEED TO MATCH
+    for(sp in 1:numSpp) {
+      
+      if(sp == 1) { #IF WE'RE ON THE FIRST SPECIES, THEN IT'S SIMPLE--WE DO THE SAME THING AS ABOVE.
+        if(is.na(connected_df$species[connDFmatches[1]])) {
+          connected_df$species[connDFmatches[1]] = intersectSpp[1] 
+        }
+        
+        attemptedReplacement = as.vector(na.omit(unique(infestedWaters$confirmed_year[infestedWaters$DOW == currDOW &
+                                                                                        infestedWaters$species == intersectSpp[1]])))
+        connected_df$to[connDFmatches[1]] = ifelse(length(attemptedReplacement) == 1, attemptedReplacement, NA)
+        
+      } else {
+        
+        #IN SOME EDGE CASES, WE'VE ALREADY SET THE VALUES IN THE SPECIES COLUMNS, SO WE ALTER THE WORKFLOW HERE TO NOT OVERWRITE THOSE DATA. 
+        if(is.na(connected_df$species[connDFmatches[sp]])) {
+          
+          dupeRow = connected_df[connDFmatches[1], ] 
+          dupeRow$species = intersectSpp[sp] 
+          attemptedReplacement = as.vector(na.omit(unique(infestedWaters$confirmed_year[infestedWaters$DOW == currDOW &
+                                                                                          infestedWaters$species == intersectSpp[sp]])))
+          dupeRow$to = ifelse(length(attemptedReplacement) == 1, attemptedReplacement, NA)
+          connected_df = rbind(connected_df, dupeRow)
+          
+        } else {
+          #OTHERWISE, WE ESSENTIALLY CREATE A COPY OF THE ROW WE JUST MADE, CHANGING JUST THE SPECIES AND CONFIRMED_YEAR VALUES AND APPEND THOSE TO OUR WORKING DATA FRAME. 
+          attemptedReplacement = as.vector(na.omit(unique(infestedWaters$confirmed_year[infestedWaters$DOW == currDOW &
+                                                                                          infestedWaters$species == intersectSpp[sp]])))
+          connected_df$to[connDFmatches[sp]] = ifelse(length(attemptedReplacement) == 1, attemptedReplacement, NA)
+        }
+      }
+    }
+  }
+}
+```
+
+At this point, we've matched as many records as we can programmatically and need to handle any edge cases manually:
+
+```{r idiosyncracies}
+connected_df$to[connected_df$from == "connected to Long (56-0388)" & is.na(connected_df$to)] = 2020 
+
+connected_df$species[connected_df$from == "connected to Scalp (56-358)" & is.na(connected_df$to)] = "zebra mussel"
+connected_df$sub[connected_df$from == "connected to Scalp (56-358)" & is.na(connected_df$to)] = "56035800"
+connected_df$to[connected_df$from == "connected to Scalp (56-358)" & is.na(connected_df$to)] = 2021
+
+connected_df$to[connected_df$from == "connected to West Sylvia (86-0279)" & is.na(connected_df$to)] = 2017
+
+connected_df$to[connected_df$from == "connected to Superior (16-0001)" & is.na(connected_df$to)] = 1995 #**CONVENIENTLY APPLIES TO BOTH TAXA HERE.
+
+connected_df$species[connected_df$from == "connected to Spoon (62-0001)" & is.na(connected_df$to)] = "zebra mussel"
+connected_df$to[connected_df$from == "connected to Spoon (62-0001)" & is.na(connected_df$to)] = 2025
+
+connected_df$to[connected_df$from == "connected to Shagawa (69-0069)" & is.na(connected_df$to)] = 2014
+
+connected_df$to[connected_df$from == "connected by the Sauk River between Sauk (77-0150) and Becker (73-0156)" & is.na(connected_df$to)] = 2018
+
+connected_df$to[connected_df$from == "connected to Rice (73-0196)" & is.na(connected_df$to)] = 2025
+
+connected_df$to[connected_df$from == "connected to Little Waverly (86-0106)" & is.na(connected_df$to)] = 2021
+```
+
+We can now *finally* use this `connected_df` we've assembled to populate a new, more "inclusive" `confirmed_year` column for every listed waterbody:
+
+```{r new inclusive confirmed}
+infestedWaters$confirmed_year_inc = NA #NEW COLUMN FOR THESE DATA.
+infestedWaters$confirmed_year_basis = "unresolved" #DESCRIBES HOW CONFIRMED_YEAR_INC WAS OBTAINED FOR TRANSPARENCY
+
+for(r in 1:nrow(infestedWaters)) { #FOR EVERY RECORD IN THE INFESTED WATERS LIST
+  
+  #WHEN THE SOURCE YEAR IS MISSING, USE THE LISTING YEAR AND LABEL THIS FALLBACK.
+  if(is.na(infestedWaters$year_or_connected_wb[r]) &
+     !is.na(infestedWaters$`Year listed as infested`[r])) {
+    infestedWaters$confirmed_year[r] = infestedWaters$`Year listed as infested`[r]
+    infestedWaters$confirmed_year_inc[r] = infestedWaters$`Year listed as infested`[r]
+    infestedWaters$confirmed_year_basis[r] = "listing_fallback"
+    next
+  }
+  
+  #FOR MANY MORE, THERE'S ALREADY A CONFIRMED YEAR, SO JUST PORT THAT OVER.
+  if(!is.na(infestedWaters$confirmed_year[r])) {
+    infestedWaters$confirmed_year_inc[r] = infestedWaters$confirmed_year[r]
+    infestedWaters$confirmed_year_basis[r] = ifelse(
+      grepl("^[0-9]{4}", infestedWaters$year_or_connected_wb[r]),
+      "reported", "source_note") #SOURCE_NOTE COVERS THE TWO EXPLICIT-YEAR NARRATIVES ABOVE.
+    next
+  } 
+    
+    #OTHERWISE, FIGURE OUT WHAT THE YEAR SHOULD BE, BASED ON OUR MANUAL+AUTOMATIC MATCHING EARLIER.
+    what2put = connected_df$to[connected_df$from == infestedWaters$year_or_connected_wb[r] &
+                                 connected_df$species == infestedWaters$species[r]]
+    
+    if(length(what2put) == 1) { #SOMETIMES, WE DON'T KNOW WHAT THAT YEAR SHOULD BE AND WE SKIP THOSE.
+      
+      infestedWaters$confirmed_year_inc[r] = what2put #STORE THE APPROPRIATE YEAR.
+      if(!is.na(what2put)) infestedWaters$confirmed_year_basis[r] = "connected_waterbody"
+    } 
+}
+```
+
+In this last code chunk, we'll just do a few remaining housekeeping items that weren't essential to perform sooner:
+
+```{r housekeeping}
+#RENAME YEAR_LISTED_AS_INFESTED FOR MACHINE READABILITY
+infestedWaters = infestedWaters %>%
+  dplyr::rename(year_listed = `Year listed as infested`)
+
+#REFASHION COUNTY COLUMN IN ONE THAT IS A CONSISTENT COMMA-DELIMITED VECTOR OF COUNTY NAMES ONLY:
+infestedWaters = infestedWaters %>% 
+  dplyr::mutate(county1 = gsub("Multiple|multiple|\\(|\\)|counties|Counties", "", county),
+                counties = trimws(gsub(" and ", ", ", county1))) %>%  #REMOVE ALL EXTRANEOUS INFO AND SWAP "AND" FOR A , AND CUT LEADING/TRAILING WHITE SPACES.
+  dplyr::select(-county1, -county)
+
+infestedWaters$counties[infestedWaters$counties == ""] = NA
+
+##Fix a typo in one value
+infestedWaters$counties = gsub("Lac qui Parle", "Lac Qui Parle", infestedWaters$counties)
+
+##A USEFUL COMMAND FOR INTERROGATING THESE VALUES:
+#table(sort(unname(unlist(sapply(infestedWaters$counties[!is.na(infestedWaters$counties)], str_split_1, pattern = ", ")))))
+```
+
+An update to version 1.0.1--We now separate waterbody names in the `wb_name` column from additional location information stored in that same column.
+
+```{r sep location and wb data}
+wb_loc_delimiters = c(" from", " \\(", " downstream", " between", ", the", " connected", ", downstream", ", including", " behind", ", from", ", 500", " 500", "; portion", " upstream", ", confluence", ",either", " on", " in", " located", " north of ", " connecting", " NW", ", east branch", " to ")
+delimit_patterns = paste0("(?=", paste(wb_loc_delimiters, collapse = "|"), ")") #INCLUDES A POSITIVE LOOKAHEAD ASSERTION AT THE START TO NOT REMOVE THE DELIMITER FROM THE RESULT.
+result = str_split(infestedWaters$wb_name, delimit_patterns, n = 2) #BREAK INTO A MAX OF 2 PIECES, SO ONLY SPLIT ON FIRST INSTANCE.
+
+infestedWaters$wb_name_only = sapply(result, "[", 1)
+infestedWaters$wb_location_details = sub("^([a-z])", "\\U\\1", trimws(sapply(result, "[", 2)), perl = T) #CAPITALIZE FIRST LETTER.
+infestedWaters$wb_name = NULL
+
+#THIS CODE ATTEMPTS TO MAKE SURE THAT SUBBASIN CODES ARE BROUGHT IN SUCCESSFULLY BUT THAT DOWS FROM WBS MENTIONED IN CONNECTIONS TO THE CURRENT WATERBODY ARE NOT ACCIDENTALLY GRABBED INSTEAD BY PERFORMING MATCHING WITH THE FIRST SIX DIGITS LISTED UNDER DOW. 
+annotatedDOW = stringr::str_match(infestedWaters$wb_location_details,
+  "^\\(DOW ([0-9]{2}-[0-9]{4}-[0-9]{2})\\)$")[, 2]
+annotatedDOW = gsub("-", "", annotatedDOW)
+useAnnotatedDOW = which(!is.na(annotatedDOW) & !is.na(infestedWaters$DOW) &
+  stringr::str_sub(annotatedDOW, 1, 6) == stringr::str_sub(infestedWaters$DOW, 1, 6))
+infestedWaters$DOW_withSubbasin[useAnnotatedDOW] = annotatedDOW[useAnnotatedDOW]
+
+#REMOVE LEADING SEPARATORS, BUT PRESERVE PARENTHESES AS THEY APPEAR IN THE SOURCE SO WE DON'T ACCIDENTALLY MANGLE THEM.
+infestedWaters$wb_location_details = gsub("^, ", "", infestedWaters$wb_location_details)
+infestedWaters$wb_location_details = gsub("^; ", "", infestedWaters$wb_location_details)
+
+#NOW, REFORMAT WB_NAMES FOR STANDARDIZED APPEARANCE.
+infestedWaters$wb_name_only = stringr::str_to_title(tolower(infestedWaters$wb_name_only))
+infestedWaters$wb_location_details = sub("^([a-z])", "\\U\\1", infestedWaters$wb_location_details, perl = T) #DO AGAIN FOR THOSE THAT HAD THEIR OPENING CHARACTERS CHANGED.
+
+```
+
+`confirmed_year_basis` describes the value in `confirmed_year_inc`: `reported` is a year at the start of the source field; `source_note` is a year extracted from one of the explicit narrative notes; `connected_waterbody` is inferred using the connection lookup; `listing_fallback` substitutes the listing year when the source field is missing; and `unresolved` means no year could be assigned. The existing year values are retained, including listing-year fallbacks in `confirmed_year`.
+
+With the file fully processed, we can now write it to disk:
+
+```{r save modified}
+infestedWaters = infestedWaters %>% 
+  select(wb_name = wb_name_only, wb_location_details, counties, DOW, DOW_withSubbasin, species, year_listed, confirmed_year_inc, confirmed_year_basis, everything()) %>% 
+  dplyr::mutate(wb_name = stringr::str_squish(wb_name),
+                wb_location_details = stringr::str_squish(wb_location_details),
+                counties = stringr::str_squish(counties),
+                species = stringr::str_squish(species)) %>% #<--TO GET RID OF ODD LINE BREAKS AND SPACING CHARACTERS.
+  dplyr::distinct() #REMOVE FULL DUPLICATES AFTER NORMALIZING WHITESPACE.
+readr::write_excel_csv(infestedWaters, "infestedWaters_cleanedNInclusive.csv")
+```

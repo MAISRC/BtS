@@ -90,7 +90,7 @@ disconnectMessage(text = " ",  #THIS DOESN'T MATTER AS WE'RE GONNA REPLACE IT WI
 #USING THE WAITER PACKAGE, WE CAN ADD IN A "PRELOADER WAITER" THAT SITS ON SCREEN WHILE THE APP BOOTS UP, WHICH IS REALLY ONLY NECESSARY IF START-UP TAKES KIND OF A WHILE. 
    waiter::waiter_preloader(html = shiny::tagList(
      waiter::spin_loaders(6), shiny::br(), shiny::br(),
-     shiny::HTML("Charting your course..."), #Provides more text so that it doesn't need to go into the alt text.
+     shiny::HTML("Spreading out..."), #Provides more text so that it doesn't need to go into the alt text.
      shiny::br(), shiny::br(),
      shiny::img(src = "maisrc-white.png", alt = "")
    ), #THIS ALT CAN BE EMPTY--THE TEXT ABOVE CONVEYS ALL NECCESSARY INFO. 
@@ -132,13 +132,12 @@ tags$main(
   
 div(
   id = "infest_map_div",
+  h2("Which lakes are invaded with which taxa?"),
   
   tags$figure(
     tags$figcaption("Map showing lakes (points) with confirmed infestations given your current input selections. Hover points for more information. "),
     leafletOutput("infest_map", width = "100%", height = "450px"),
-  )
-
- ),
+  ),
 
 tags$fieldset(
   tags$legend("Control which infestations are mapped"),
@@ -146,12 +145,12 @@ tags$fieldset(
   fluidRow(
     style = "width: 100%;",
     
-    column(width = 4, offset = 2, 
+    column(width = 4, offset = 1, 
            
            pickerInput("infest_spp", 
                        label = "Invader(s)",
                        choices = sort(unique(IWL_allSources$species)), 
-                       selected = unique(IWL_allSources$species), 
+                       selected = setdiff(unique(IWL_allSources$species), rares),  #ASSUMES EXCLUDES RARES IS CHECKED TO START. 
                        multiple = TRUE, 
                        options = pickerOptions(actionsBox = TRUE, 
                                                selectedTextFormat = "count > 2",
@@ -184,7 +183,7 @@ tags$fieldset(
            
     ), #END FIRST COL
     
-    column(width = 4, offset = 0, 
+    column(width = 4, offset = 1, 
   
   sliderInput("infest_years", 
               label = "Year confirmed", 
@@ -202,20 +201,118 @@ tags$fieldset(
   checkboxInput("exclude_noaccess", 
                 label = "Exclude records from waterbodies without public accesses", 
                 value = FALSE),
+  
+  checkboxInput("exclude_rares",
+                label = "Exclude taxa with few (< 8) infestations",
+                value = TRUE)
 
     ) #END SECOND COL
   
   ) #END FLUID ROW
  
+  
+  )
+
  ),
+
+hr(),
+br(),
 
 div(
   id = "infest_graph_div",
+  h2("How have the rates of new infestations changed over time?"),
   tags$figure(
     tags$figcaption("Line graph showing the numbers of new confirmed infestations (#s of waterbodies with DOW numbers; y-axis) per year (x-axis) by invasive species (colors). Lines can be hovered for more information. Double-click a legend key to select just a single line; single-click to remove a line."),
 plotlyOutput("infest_graph", width = "100%", height = "500px")
 )
-)
+),
+
+hr(),
+br(),
+
+div(
+  id = "saturation_div",
+  h2("How \"saturated\" with invaders are Minnesota's lakes?"),
+  
+  tags$section(
+    p("AIS spread prevention can only be effective if there are still invadable waterbodies that haven't yet been invaded and we can thus prevent them from becoming invaded. So, we might wonder: \"How close to fully invaded\" are Minnesota's lakes? Here, we define \"fully invaded\" as every (invadable) lake having every possible invader."),
+    p("As such, the answer to this important question depends on three main factors: "),
+    tags$ul(
+      tags$li("Which waterbodies, regions, and taxa are we considering?"),
+      tags$li("What fraction of waterbodies is actually \"invadable?\", and"),
+      tags$li("What fraction of all \"true\" invasions is known?")
+    ),
+    p("We know not all lakes are even inhabitable (or colonizable) by all taxa and that the percentage that is inhabitable probably depends on the taxon. Research (Kanankege",
+      em("et al."), "2019 (",
+      a("see here",
+        href = "https://www.researchgate.net/publication/344694872_The_use_of_spatiotemporal_analytical_tools_to_inform_decisions_and_policy_in_One_Health_scenarios",
+        target = "_blank",
+        rel = "noopener"
+      ),
+      ") and Muthukrishnan",
+      em("et al."),
+      "2018 (",
+      a("see here",
+        href = "https://doi.org/10.1016/j.aquabot.2018.08.001",
+        target = "_blank",
+        rel = "noopener"
+      ),
+      ")) suggests that the percentage of lakes suitable for zebra mussel, starry stonewort, and Eurasian watermilfoil is likely between 30-70%, for example."
+    ),
+    p(
+      "We also know that AIS surveillance and monitoring only catches so many infestations, especially when they are new and small. Because we can only count infestations we know about, the number of existing-but-unknown infestations is important to estimate. One estimate from neighboring Wisconsin from over a decade ago (Latzka",
+      em("et al."),
+      "2013 (",
+      a("see here",
+        href = "https://www.researchgate.net/publication/267290078_How_invaded_are_we_really_Aquatic_invasive_species_occurrence_datasets_under-represent_species_distributions_and_misinform_predictive_models",
+        target = "_blank",
+        rel = "noopener"
+      ),
+      ")) suggested we may only know about as few as 25% of all existing infestations, though we'd like to think we know about a far greater percentage than that."
+    ),
+    p("Lastly, the answer also depends on how what pool of waterbodies and taxa one considers. Do we include only lakes large enough to have motorized boat traffic (research suggests boats are the dominant cause of new infestations)? That have public, motorized boat launches? Do we include only relatively common or high-priority taxa?")
+  ),
+  fluidRow(
+    column(width = 4, offset = 1,
+  tags$fieldset(
+    tags$legend("Use these additional toggles to set your assumptions about how invadable MN lakes are and how many invasions we know about. Use the selectors earlier in the app to control which taxa, regions, and waterbodies are included."),
+    numericInput("habitability_selector",
+                 label = "% of lakes habitable", 
+                 value = 50, 
+                 min = 0, 
+                 max = 100, 
+                 step = 1
+                 ),
+    numericInput("known_selector",
+                 label = "% of true infestations known", 
+                 value = 50, 
+                 min = 0, 
+                 max = 100, 
+                 step = 1
+                 )
+   )
+  ),
+  column(width = 4, offset = 1,
+    tags$figure(
+      tags$figcaption(
+        "Text displaying the approximate percentage of Minnesota lakes invaded (# known + unknown invasions per lake and taxon / # lakes * # species)."
+      ),
+      textOutput("saturation_percentage"),
+      textOutput("saturation_context")
+    )
+
+  )
+ )
+),
+
+hr(),
+br(), 
+
+div(
+  id = "info_area_div",
+  downloadLink("invasives_list",
+               label = "Download a CSV file of all taxa we're considering invasive")
+),
 
 ), #END MAIN
 
@@ -224,7 +321,7 @@ plotlyOutput("infest_graph", width = "100%", height = "500px")
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
 HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center, University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>, under the current direction of <address><a href='mailto:XXX@umn.edu'>XXX (XXX@umn.edu)</a></address>.<br>
-App last updated Nov. 2 2026. Version 0.0.1. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
+App last updated Nov. 5 2026. Version 0.0.2. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"
