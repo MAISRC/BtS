@@ -42,22 +42,25 @@ Eichhornia azurea,Rooted water hyacinth,7 CFR 360.200 aquatic and wetland weeds;
 Epilobium hirsutum,Hairy willowherb,Wisconsin DNR Hairy willow herb invasive species
 Eriocheir sinensis,Chinese mitten crab,Minnesota Rule 6216.0250 and 50 CFR 16.13
 Faxonius rusticus,Rusty crayfish,Minnesota Rule 6216.0260 regulated invasive species
+Filipendula ulmaria,Queen of the Meadow,Frequently reported in the NAS database; restricted in WI.
 Frangula alnus,Glossy buckthorn,USGS 2023 Rainy-Lake of the Woods AIS risk assessment
 Gambusia affinis,Western mosquitofish,Minnesota Rule 6216.0250 prohibited invasive species; Codex search addition
 Gambusia holbrooki,Eastern mosquitofish,Minnesota Rule 6216.0250 prohibited invasive species
 Gammarus tigrinus,Tiger scud,USGS 2023 Rainy-Lake of the Woods AIS risk assessment; Codex search addition
 Glyceria maxima,Reed sweetgrass,USGS 2023 Rainy-Lake of the Woods AIS risk assessment
-Gymnocephalus cernuus,Ruffe,Minnesota Rule 6216.0250 prohibited invasive species
+Gymnocephalus cernua,Ruffe,Minnesota Rule 6216.0250 prohibited invasive species
 Hemimysis anomala,Bloody red shrimp,USGS 2023 Rainy-Lake of the Woods AIS risk assessment
 Heterogen japonica,Japanese mystery snail,MAISRC 2026 Priority Species January 14 revision; Codex search addition
 Hydrilla verticillata,Hydrilla,Minnesota Rule 6216.0250 prohibited invasive species
 Hydrocharis morsus-ranae,European frog-bit,Minnesota Rule 6216.0250 prohibited invasive species
+Hydrocotyle ranunculoides,Floating marsh pennywort,Frequently reported in the NAS database; restricted in WI.
 Hygrophila polysperma,Indian swampweed,Minnesota Rule 6216.0250 prohibited invasive species
 Hypophthalmichthys harmandi,Largescale silver carp,Minnesota Rule 6216.0250 prohibited invasive species; Codex search addition
 Hypophthalmichthys molitrix,Silver carp,Minnesota Rule 6216.0250 prohibited invasive species
 Hypophthalmichthys nobilis,Bighead carp,Minnesota Rule 6216.0250 prohibited invasive species
 Ipomoea aquatica,Water spinach,Minnesota Rule 6216.0260 regulated invasive species
 Iris pseudacorus,Yellow iris,Minnesota Rule 6216.0260 regulated invasive species
+Juncus compressus,Round-fruited rush,USGS 2023 Rainy-Lake of the Woods AIS risk assessment; Frequently reported in the NAS database.
 Lagarosiphon major,African oxygen weed,Minnesota Rule 6216.0250 prohibited invasive species
 Lates niloticus,Nile perch,Minnesota Rule 6216.0250 and 50 CFR 16.13
 Limnoperna fortunei,Golden mussel,Minnesota Rule 6216.0250 prohibited invasive species
@@ -76,8 +79,7 @@ Mylopharyngodon piceus,Black carp,Minnesota Rule 6216.0250 prohibited invasive s
 Myocastor coypus,Nutria,Minnesota Rule 6216.0250 prohibited invasive species; Codex search addition
 Myosotis scorpioides,Aquatic forget-me-not,Wisconsin DNR Aquatic forget-me-not invasive species
 Myriophyllum aquaticum,Parrot's feather,Minnesota Rule 6216.0260 regulated invasive species
-Myriophyllum spicatum,Eurasian watermilfoil,Minnesota Rule 6216.0250 prohibited invasive species
-Myriophyllum spicatum × Myriophyllum sibiricum,Hybrid watermilfoil,MAISRC 2026 Priority Species January 14 revision
+Myriophyllum spicatum,Eurasian or hybrid watermilfoil,Minnesota Rule 6216.0250 prohibited invasive species
 Najas minor,Brittle naiad,Minnesota Rule 6216.0250 prohibited invasive species
 Nasturtium officinale,Watercress,USGS 2023 Rainy-Lake of the Woods AIS risk assessment
 Neoergasilus japonicus,Japanese ergasilid copepod,USGS 2023 Rainy-Lake of the Woods AIS risk assessment; Codex search addition
@@ -85,6 +87,7 @@ Neogobius melanostomus,Round goby,Minnesota Rule 6216.0250 prohibited invasive s
 Nitellopsis obtusa,Starry stonewort,Minnesota Rule 6216.0250 prohibited invasive species
 Nymphaea alba,European white waterlily,Minnesota Rule 6216.0260; NZPCN Nymphaea alba; Codex search addition
 Nymphoides peltata,Yellow floating-heart,Minnesota Rule 6216.0250 prohibited invasive species
+Oenanthe javanica,Java waterdropwort,Frequently reported in the NAS database; restricted in WI.
 Osmerus mordax,Rainbow smelt,Minnesota Rule 6216.0260 regulated invasive species; Codex search addition
 Ottelia alismoides,Ducklettuce,7 CFR 360.200 aquatic and wetland weeds; Codex search addition
 Pacifastacus leniusculus,Signal crayfish,MAISRC 2026 Priority Species January 14 revision
@@ -93,7 +96,7 @@ Perccottus glenii,Amur sleeper,Minnesota Rule 6216.0250 prohibited invasive spec
 Petromyzon marinus,Sea lamprey,Minnesota Rule 6216.0250 prohibited invasive species
 Phalaris arundinacea,Reed canary grass,Minnesota DNR Reed canary grass invasive species
 Phoxinus phoxinus,Eurasian minnow,Minnesota Rule 6216.0250 prohibited invasive species; Codex search addition
-Phragmites australis subsp. australis,Nonnative common reed,Minnesota Rule 6216.0250 prohibited invasive species
+Phragmites australis,Nonnative common reed,Minnesota Rule 6216.0250 prohibited invasive species
 Pistia stratiotes,Water lettuce,University of Minnesota Extension Water lettuce
 Pontederia crassipes,Water hyacinth,Minnesota Rule 6216.0260 regulated invasive species
 Potamogeton crispus,Curly-leaf pondweed,Minnesota Rule 6216.0250 prohibited invasive species
@@ -110,6 +113,7 @@ Renibacterium salmoninarum,Bacterial kidney disease bacterium,MAISRC 2026 Priori
 Rorippa sylvestris,Creeping yellowcress,USGS 2023 Rainy-Lake of the Woods AIS risk assessment
 Rutilus rutilus,Roach,Minnesota Rule 6216.0250 prohibited invasive species; Codex search addition
 Sagittaria sagittifolia,European arrowhead,7 CFR 360.200 aquatic and wetland weeds; Codex search addition
+Salmo trutta,Brown trout,Frequently reported in the NAS database; some DNR research suggests invasiveness.
 Salvinia auriculata,Eared watermoss,7 CFR 360.200 aquatic and wetland weeds; Codex search addition
 Salvinia biloba,Two-lobed watermoss,7 CFR 360.200 aquatic and wetland weeds; Codex search addition
 Salvinia herzogii,Herzog's watermoss,7 CFR 360.200 aquatic and wetland weeds; Codex search addition
@@ -126,8 +130,7 @@ Tetracapsuloides bryosalmonae,Proliferative kidney disease parasite,MAISRC 2026 
 Tinca tinca,Tench,Minnesota Rule 6216.0250 prohibited invasive species
 Trachemys scripta elegans,Red-eared slider,Minnesota Rule 6216.0260 regulated invasive species; Codex search addition
 Trapa natans,Water chestnut,Minnesota Rule 6216.0250 prohibited invasive species
-Typha × glauca,Hybrid cattail,MAISRC 2026 Priority Species January 14 revision
-Typha angustifolia,Narrow-leaved cattail,MAISRC 2026 Priority Species January 14 revision
+Typha angustifolia,Narrow-leaved or hybrid cattail,MAISRC 2026 Priority Species January 14 revision
 Typha laxmannii,Graceful cattail,USGS 2023 Rainy-Lake of the Woods AIS risk assessment; Codex search addition
 Valvata piscinalis,European valve snail,USGS 2023 Rainy-Lake of the Woods AIS risk assessment; Codex search addition
 Yersinia ruckeri,Enteric redmouth bacterium,MAISRC 2026 Priority Species January 14 revision; Codex search addition

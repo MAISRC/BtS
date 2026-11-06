@@ -5,7 +5,7 @@ $(document).on('shiny:disconnected', function(event) {
     if (el) {
       // Create an accessible alert
       var msgContainer = document.createElement('div');
-      msgContainer.innerHTML = 'XXX has timed out or crashed.<br>If you suspect a crash, contact <address><a href=\"mailto:bajcz003@umn.edu\" id = \"disconnectemail\">Dr. Alex Bajcz</a></address>.';
+      msgContainer.innerHTML = 'Beating the Spread has timed out or crashed.<br>If you suspect a crash, contact <address><a href=\"mailto:bajcz003@umn.edu\" id = \"disconnectemail\">Dr. Alex Bajcz</a></address>.';
       msgContainer.setAttribute('role', 'alertdialog');
       msgContainer.setAttribute('tabindex', '-1');
       msgContainer.setAttribute('aria-label', 'Error message');

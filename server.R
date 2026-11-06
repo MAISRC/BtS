@@ -2,22 +2,26 @@
 
 shinyServer(function(input, output, session) {
   
-# ### REACTIVE VALS ### -------------------------------------
+# REACTIVE VALS -------------------------------------
   
-  curr_map_sf = reactiveVal(IWL_allSources %>% filter(!species %in% rares))
-  appDoneLoading = reactiveVal(FALSE)
+  curr_map_sf = reactiveVal(startingDF) #THIS TRACKS THE CURRENT FILTERED INFESTATIONS LIST ACCORDING TO REGION, WATERBODIES, TIME FRAME, AND TAXA.
+  # appDoneLoading = reactiveVal(FALSE) #IS THE APP READY YET?
   
 # ### ONE-TIME OBSERVERS ### -------------------------------------
   
-  session$onFlushed(function() {
-    appDoneLoading(TRUE)
-  }, once = TRUE)
+  # #TELLS OBSERVERS THE APP IS READY.
+  # session$onFlushed(function() {
+  #   appDoneLoading(TRUE)
+  # }, once = TRUE)
 
-# ### NON-MODULARIZED SERVER CODE ### -------------------------------------
+# NON-MODULARIZED SERVER CODE -------------------------------------
+
+
+## INITIAL INFESTATIONS MAP ------------------------------------------------
 
   output$infest_map = renderLeaflet({
     
-    IWL_start = isolate(curr_map_sf())
+    IWL_start = startingDF #START FROM THE INITIAL (FILTERED) INFESTATIONS DATA SET. SEE GLOBAL.R
     
     IWL_start$lat = st_coordinates(IWL_start)[,2]
     IWL_start$lng = st_coordinates(IWL_start)[,1]
@@ -25,19 +29,19 @@ shinyServer(function(input, output, session) {
     IWF_summs = IWL_start %>% 
       st_drop_geometry() %>% 
       group_by(lat, lng, species) %>% #TO ACCOUNT FOR THE POSSIBILITY THAT TWO DIFFERENT SOURCES HAVE THE SAME TAXON BUT FOR DIFF YEARS, COLLAPSE TO THE EARLIER ONE ACCORDING TO ALL SOURCES AVAILABLE. 
-      filter(confirmed_year_inc == min(confirmed_year_inc)) %>% 
+      filter(year == min(year)) %>% 
       ungroup() %>% 
       group_by(lat, lng) %>% 
       summarize(all_species = paste(unique(stringr::str_to_sentence(species)), collapse = ", "),
-                all_confirmed_years = paste(confirmed_year_inc, collapse = ", "),
-                wb_name = first(wb_name),
+                all_confirmed_years = paste(year, collapse = ", "),
+                LAKE_NAME = first(LAKE_NAME),
                 DOW = first(DOW),
                 .groups = "drop_last") %>% 
       distinct(lat, lng, .keep_all = T) %>% 
       ungroup()
 
     IWF_summs$labels = lapply(seq_len(nrow(IWF_summs)), function(x) {
-      paste0("Waterbody: ", IWF_summs$wb_name[x], "<br>",
+      paste0("Waterbody: ", IWF_summs$LAKE_NAME[x], "<br>",
              "DOW: ", IWF_summs$DOW[x], "<br>",
              "Invader(s): ", IWF_summs$all_species[x], "<br>",
              "Confirmed year(s): ", IWF_summs$all_confirmed_years[x], "<br>")
@@ -77,17 +81,17 @@ shinyServer(function(input, output, session) {
 
     currDF = IWL_start %>% 
       st_drop_geometry() %>% 
-      dplyr::select(DOW, species, confirmed_year_inc) %>% 
-      dplyr::filter(!is.na(confirmed_year_inc)) %>% 
+      dplyr::select(DOW, species, year) %>% 
+      dplyr::filter(!is.na(year)) %>% 
       dplyr::group_by(DOW, species) %>% 
-      dplyr::summarize(confirmed_year_inc = min(confirmed_year_inc), .groups = "drop") %>% 
-      group_by(species, confirmed_year_inc) %>% 
+      dplyr::summarize(year = min(year), .groups = "drop") %>% 
+      group_by(species, year) %>% 
       summarize(n = n(), .groups = "drop") 
     
     #ADD IN A VISUAL TRACE FOR ALL TAXA COMBINED.
 
     allSppTrace = currDF %>% 
-      group_by(confirmed_year_inc) %>% 
+      group_by(year) %>% 
       summarize(n = sum(n))
     
     allSppTrace$species = "All"
@@ -95,12 +99,12 @@ shinyServer(function(input, output, session) {
     currDF = bind_rows(currDF, allSppTrace)
 
     #BUT THEN WE NEED TO MAKE ALL THE 0S
-    currDFAll = expand.grid(confirmed_year_inc = seq(from = min(currDF$confirmed_year_inc, na.rm = T),
-                                                     to = max(currDF$confirmed_year_inc, na.rm = T),
+    currDFAll = expand.grid(year = seq(from = min(currDF$year, na.rm = T),
+                                                     to = max(currDF$year, na.rm = T),
                                                      by = 1), 
                             species = c(unique(currDF$species), "All"))
     
-    currDFAll = left_join(currDFAll, currDF, by = c("confirmed_year_inc", "species"))
+    currDFAll = left_join(currDFAll, currDF, by = c("year", "species"))
     currDFAll$n[is.na(currDFAll$n)] = 0
     
     make_infest_graph(currDFAll, spp_pal_all)
@@ -111,7 +115,7 @@ shinyServer(function(input, output, session) {
   
 observeEvent(curr_map_sf(), ignoreInit = TRUE, {
   
-  req(appDoneLoading())
+  # req(appDoneLoading())
 
   map_sf = curr_map_sf()
   
@@ -121,19 +125,19 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
   IWF_summs = map_sf %>% 
     st_drop_geometry() %>% 
     group_by(lat, lng, species) %>% #TO ACCOUNT FOR THE POSSIBILITY THAT TWO DIFFERENT SOURCES HAVE THE SAME TAXON BUT FOR DIFF YEARS, COLLAPSE TO THE EARLIER ONE ACCORDING TO ALL SOURCES AVAILABLE. 
-    filter(confirmed_year_inc == min(confirmed_year_inc)) %>% 
+    filter(year == min(year)) %>% 
     ungroup() %>% 
     group_by(lat, lng) %>% 
     summarize(all_species = paste(stringr::str_to_sentence(species), collapse = ", "),
-              all_confirmed_years = paste(confirmed_year_inc, collapse = ", "),
-              wb_name = first(wb_name),
+              all_confirmed_years = paste(year, collapse = ", "),
+              LAKE_NAME = first(LAKE_NAME),
               DOW = first(DOW),
               .groups = "drop_last") %>% 
     distinct(lat, lng, .keep_all = T) %>% 
     ungroup()
   
   IWF_summs$labels = lapply(seq_len(nrow(IWF_summs)), function(x) {
-    paste0("Waterbody: ", IWF_summs$wb_name[x], "<br>",
+    paste0("Waterbody: ", IWF_summs$LAKE_NAME[x], "<br>",
            "DOW: ", IWF_summs$DOW[x], "<br>",
            "Invader(s): ", IWF_summs$all_species[x], "<br>",
            "Confirmed year(s): ", IWF_summs$all_confirmed_years[x], "<br>")
@@ -158,11 +162,11 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
   
   newDF = map_sf %>% 
     st_drop_geometry() %>% 
-    dplyr::select(DOW, species, confirmed_year_inc) %>% 
-    dplyr::filter(!is.na(confirmed_year_inc)) %>% 
+    dplyr::select(DOW, species, year) %>% 
+    dplyr::filter(!is.na(year)) %>% 
     dplyr::group_by(DOW, species) %>% 
-    dplyr::summarize(confirmed_year_inc = min(confirmed_year_inc), .groups = "drop") %>% 
-    group_by(species, confirmed_year_inc) %>% 
+    dplyr::summarize(year = min(year), .groups = "drop") %>% 
+    group_by(species, year) %>% 
     summarize(n = n(), .groups = "drop") 
   
   spp2use = unique(newDF$species)
@@ -171,7 +175,7 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
   #ADD IN A VISUAL TRACE FOR ALL TAXA COMBINED.
   if(length(unique(newDF$species)) > 1) {
   allSppTrace = newDF %>% 
-    group_by(confirmed_year_inc) %>% 
+    group_by(year) %>% 
     summarize(n = sum(n))
   
   allSppTrace$species = "All"
@@ -183,13 +187,13 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
   
   } 
   
-  newDFAll = expand.grid(confirmed_year_inc = seq(from = min(newDF$confirmed_year_inc, na.rm = T),
-                                                   to = max(newDF$confirmed_year_inc, na.rm = T),
+  newDFAll = expand.grid(year = seq(from = min(newDF$year, na.rm = T),
+                                                   to = max(newDF$year, na.rm = T),
                                                    by = 1), 
                           species = spp2use)
 
 
-  newDFAll = left_join(newDFAll, newDF, by = c("confirmed_year_inc", "species"))
+  newDFAll = left_join(newDFAll, newDF, by = c("year", "species"))
   newDFAll$n[is.na(newDFAll$n)] = 0
   
   built = plotly_build(make_infest_graph(newDFAll, pal2use)) #FAKE-BUILD A NEW VERSION
@@ -208,6 +212,8 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
 
 # ### OBSERVERS ### ---------------------------------------------------------------
 
+## UPDATE CURR DF OBSERVER -----------------------------------------------------
+  
   observeEvent(
     list(input$infest_years, 
                     input$infest_spp, 
@@ -218,15 +224,16 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
                     input$exclude_rares
                     ), {
     
+    #FILTER ACCORDING TO ALL USER INPUTS
     tmp = IWL_allSources %>% 
-      filter(confirmed_year_inc >= input$infest_years[1], 
-             confirmed_year_inc <= input$infest_years[2],
+      filter(year >= input$infest_years[1], 
+             year <= input$infest_years[2],
              species %in% input$infest_spp,
-             if(input$exclude_conns == TRUE) { connected != TRUE } else { TRUE } ,
-             grepl(paste(input$infest_ctys, collapse = "|"), counties), #USES OR SYNTAX TO SAY THAT AS LONG AS ANY SELECTED COUNTY GREPLS, KEEP.
+             if(input$exclude_conns == TRUE) { connected == FALSE } else { TRUE } ,
+             grepl(paste(input$infest_ctys, collapse = "|"), COUNTY), #USES OR SYNTAX TO SAY THAT AS LONG AS ANY SELECTED COUNTY GREPLS, KEEP.
              source %in% input$infest_source,
              if(input$exclude_noaccess == TRUE) { DOW %in% pub_accesses } else { TRUE },
-             if(input$exclude_rares == TRUE) { !species %in% rares } else { TRUE }
+             if(input$exclude_rares == TRUE) { species %in% setdiff(unique(species), rares) } else { TRUE } #IF WE'RE EXCLUDING RARES, SPECIES HAS TO BE W/IN SET THAT DOESN'T INCLUDE ANY OF THE RARE ONES.
              ) 
     
     req(nrow(tmp) > 0) #BAIL IF OVER-FILTERED
@@ -235,6 +242,8 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     
   })
   
+## SATURATION OBSERVER -----------------------------------------------------
+
   observeEvent(
     list(input$infest_years, 
          input$infest_spp, 
@@ -247,24 +256,38 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
          input$known_selector
     ), {
       
-    filtered_wbs = dows_lakenames_counties %>% 
+    #CALC TOTAL NUMBER OF WATERBODIES IN REGION UNDER CONSIDERATION
+    filtered_wbs = lakesDBsimple %>% 
       filter(COUNTY %in% input$infest_ctys)
     
-    filtered_taxa = input$infest_spp
+    #CALC TOTAL NUMBER OF INFESTATIONS: LAKES * TAXA BEING CONSIDERED
+    total_possible_infestations = nrow(filtered_wbs) * length(input$infest_spp)
     
-    total_possible_infestations = nrow(filtered_wbs) * length(filtered_taxa)
-    
+    #DECREASE THAT NUMBER ACCORDING TO USER'S HABITAT SUITABILITY ASSUMPTION (AVG. FRACTION OF INVADABLE LAKES)
     user_possible_infestations = round(total_possible_infestations *
-                                        (input$habitability_selector/100) *
-                                        (input$known_selector/100))
+                                        (input$habitability_selector/100))
     
+    #COUNT # OF KNOWN INFESTATIONS 
     currDF = curr_map_sf()
-    known_true_infestations = nrow(currDF)
     
-    estimated_saturation = round(((known_true_infestations/user_possible_infestations) * 100), 2)
+    known_true_infestations = currDF %>% 
+      distinct(DOW, species) %>% #ONLY 1 ROW PER SPECIES AND LAKE!
+      nrow()
+      
+    #INCREASE THAT NUMBER ACCORDING TO USER'S ASSUMPTION ABOUT THE FRACTION OF TRUE INFESTATIONS WE ALREADY KNOW ABOUT. 
+    possible_true_infestations = (known_true_infestations * (100/input$known_selector))
     
-    text2say = paste0(estimated_saturation, "%")
+    #CALC ESTIMATED SATURATION: UNKNOWN+KNOWN INFESTATIONS / POSSIBLE INFESTATIONS.
+    estimated_saturation = round(
+      ((possible_true_infestations / user_possible_infestations) * 100
+    ), 2)
     
+    #PRESENT CALC-ED SATURATION TEXT
+    output$saturation_percentage = renderText({
+      paste0(estimated_saturation, "%")
+    })
+    
+    #DETERMINE CONTEXT TEXT TO REPORT
     if(estimated_saturation > 100) {
       
       output$saturation_context = renderText({
@@ -289,22 +312,32 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
        message
       })
       
-      
-    }
+  }
+})
+  
+## EXCLUDE TAXA OBSERVER -----------------------------------------------------
+  
+observeEvent(input$exclude_rares, {
+  
+  req(input$exclude_rares) #ONLY HAPPENS IF TRUE
+  
+  currDF = curr_map_sf()
+  
+  currSpp = unique(currDF$species)
+  
+  newSpp = setdiff(currSpp, rares)
+  
+  updatePickerInput(session = session, inputId = "infest_spp", selected = newSpp)
+  
+})
+  
+# DOWNLOAD HANDLERS ### ----------------------------------------------------
+  
+## INVASIVE SPP LIST -------------------------------------------------------
 
-    output$saturation_percentage = renderText({
-      
-    text2say
-      
-    })
-      
-  })
-  
-  # ### DOWNLOAD HANDLERS ### ----------------------------------------------------
-  
   output$invasives_list = downloadHandler(
     filename = "BtS_invasive_species_list.csv",
-    content = function(file) {
+    function(file) {
       write.csv(allInvasivesList, file, row.names = FALSE)
     }
   )

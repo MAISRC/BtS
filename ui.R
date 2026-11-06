@@ -130,14 +130,20 @@ tags$header(
 tags$main(
   id = "map_main",
   
+
+### INFESTATION MAP DIV ---------------------------------------------------------
+
 div(
   id = "infest_map_div",
   h2("Which lakes are invaded with which taxa?"),
   
+  #### INFESTATION MAP ---------------------------------------------------------
   tags$figure(
     tags$figcaption("Map showing lakes (points) with confirmed infestations given your current input selections. Hover points for more information. "),
     leafletOutput("infest_map", width = "100%", height = "450px"),
   ),
+  
+  #### SCOPE FILTERING FIELDSET ---------------------------------------------------------
 
 tags$fieldset(
   tags$legend("Control which infestations are mapped"),
@@ -150,7 +156,7 @@ tags$fieldset(
            pickerInput("infest_spp", 
                        label = "Invader(s)",
                        choices = sort(unique(IWL_allSources$species)), 
-                       selected = setdiff(unique(IWL_allSources$species), rares),  #ASSUMES EXCLUDES RARES IS CHECKED TO START. 
+                       selected = unique(startingDF$species), #ASSUMES EXCLUDES RARES IS CHECKED TO START. SEE GLOBAL.R.
                        multiple = TRUE, 
                        options = pickerOptions(actionsBox = TRUE, 
                                                selectedTextFormat = "count > 2",
@@ -158,11 +164,10 @@ tags$fieldset(
                        )
            ),
            
-           
            pickerInput("infest_ctys", 
                        label = "County(ies)",
-                       choices = sort(unique(IWL_allSources$counties[!grepl(",", IWL_allSources$counties)])), 
-                       selected = unique(IWL_allSources$counties[!grepl(",", IWL_allSources$counties)]), 
+                       choices = sort(unique(IWL_allSources$COUNTY[!grepl(",", IWL_allSources$COUNTY)])), 
+                       selected = unique(IWL_allSources$COUNTY[!grepl(",", IWL_allSources$COUNTY)]), 
                        multiple = TRUE, 
                        options = pickerOptions(actionsBox = TRUE, 
                                                selectedTextFormat = "count > 2",
@@ -187,53 +192,57 @@ tags$fieldset(
   
   sliderInput("infest_years", 
               label = "Year confirmed", 
-              min = min(IWL_allSources$confirmed_year_inc, na.rm=T), 
-              max = max(IWL_allSources$confirmed_year_inc, na.rm=T), 
+              min = min(IWL_allSources$year, na.rm=T), 
+              max = max(IWL_allSources$year, na.rm=T), 
               step = 1, 
-              value = c(min(IWL_allSources$confirmed_year_inc, na.rm=T), max(IWL_allSources$confirmed_year_inc, na.rm=T)),
+              value = c(startingYear, max(IWL_allSources$year, na.rm=T)), #SEE GLOBAL.R FOR STARTINGYEAR VALUE.
               sep = ""
-                ),
+  ),
   
   checkboxInput("exclude_conns", 
-                label = "Exclude records listed due to water connections, not independent confirmations (by state statute, waterbodies connected to infested waterbodies are treated as infested, and independent confirmation is rare)", 
+                label = "Exclude records listed due to water connections, not independent confirmations (state statute says waterbodies connected to infested waterbodies are treated as infested whether these are confirmed or not (and confirmations rarely occur))", 
                 value = FALSE),
   
   checkboxInput("exclude_noaccess", 
-                label = "Exclude records from waterbodies without public accesses", 
+                label = "Exclude records from waterbodies without public motorized boat launches", 
                 value = FALSE),
   
   checkboxInput("exclude_rares",
-                label = "Exclude taxa with few (< 8) infestations",
+                label = "Exclude taxa with few (< 10) known infestations",
                 value = TRUE)
 
-    ) #END SECOND COL
-  
-  ) #END FLUID ROW
- 
-  
-  )
+     ) #END SECOND COL
+   ) #END FLUID ROW
+  ) #END FIELD SET
 
- ),
+ ), #END MAP DIV
 
 hr(),
 br(),
+
+### CHANGE GRAPH DIV ---------------------------------------------------------
 
 div(
   id = "infest_graph_div",
   h2("How have the rates of new infestations changed over time?"),
+  
+  #### CHANGE GRAPH ---------------------------------------------------------
   tags$figure(
     tags$figcaption("Line graph showing the numbers of new confirmed infestations (#s of waterbodies with DOW numbers; y-axis) per year (x-axis) by invasive species (colors). Lines can be hovered for more information. Double-click a legend key to select just a single line; single-click to remove a line."),
-plotlyOutput("infest_graph", width = "100%", height = "500px")
-)
-),
+    plotlyOutput("infest_graph", width = "100%", height = "500px")
+  ) #END FIG
+), #END GRAPH DIV
 
 hr(),
 br(),
+
+### SATURATION DIV ---------------------------------------------------------
 
 div(
   id = "saturation_div",
   h2("How \"saturated\" with invaders are Minnesota's lakes?"),
   
+  #### SATURATION EXPLANATION ---------------------------------------------------------
   tags$section(
     p("AIS spread prevention can only be effective if there are still invadable waterbodies that haven't yet been invaded and we can thus prevent them from becoming invaded. So, we might wonder: \"How close to fully invaded\" are Minnesota's lakes? Here, we define \"fully invaded\" as every (invadable) lake having every possible invader."),
     p("As such, the answer to this important question depends on three main factors: "),
@@ -274,6 +283,8 @@ div(
   ),
   fluidRow(
     column(width = 4, offset = 1,
+           
+  #### SATURATION ASSUMPTIONS ---------------------------------------------------------
   tags$fieldset(
     tags$legend("Use these additional toggles to set your assumptions about how invadable MN lakes are and how many invasions we know about. Use the selectors earlier in the app to control which taxa, regions, and waterbodies are included."),
     numericInput("habitability_selector",
@@ -293,6 +304,8 @@ div(
    )
   ),
   column(width = 4, offset = 1,
+         
+    #### SATURATION ESTIMATE ---------------------------------------------------------
     tags$figure(
       tags$figcaption(
         "Text displaying the approximate percentage of Minnesota lakes invaded (# known + unknown invasions per lake and taxon / # lakes * # species)."
@@ -308,6 +321,7 @@ div(
 hr(),
 br(), 
 
+### FURTHER INFO DIV ---------------------------------------------------------
 div(
   id = "info_area_div",
   downloadLink("invasives_list",
@@ -321,7 +335,7 @@ div(
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
 HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center, University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>, under the current direction of <address><a href='mailto:XXX@umn.edu'>XXX (XXX@umn.edu)</a></address>.<br>
-App last updated Nov. 5 2026. Version 0.0.2. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
+App last updated Nov. 6 2026. Version 0.0.3. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"
