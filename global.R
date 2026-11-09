@@ -147,7 +147,9 @@ pub_accesses = readRDS("inputs/Static/pub_accesses.rds")
 
 #RUN LATEST VERSION OF MNDNR IWL CLEANING CODE FROM MY GITHUB
 suppressWarnings(knitr::purl("Rcode/Markdown/MNDNR_IWF_Transformation.qmd", 
-                             output = "temp_script.R", documentation = 0, quiet = T))
+                             output = "temp_script.R"))
+
+source("temp_script.R", local = TRUE)
 
 unlink("temp_script.R")
 
