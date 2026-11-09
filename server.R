@@ -234,7 +234,9 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
              source %in% input$infest_source,
              if(input$exclude_noaccess == TRUE) { DOW %in% pub_accesses } else { TRUE },
              if(input$exclude_rares == TRUE) { species %in% setdiff(unique(species), rares) } else { TRUE } #IF WE'RE EXCLUDING RARES, SPECIES HAS TO BE W/IN SET THAT DOESN'T INCLUDE ANY OF THE RARE ONES.
-             ) 
+             ) %>% 
+      filter(year == min(year), .by = c(DOW, species)) %>% #MUCH AS IN GLOBAL.R, THIS COMMAND WILL RESOLVE THE COLLISIONS SUCH THAT OF THE SOURCES SELECTED ONLY THE VERY FIRST RECORD WILL WIN.
+      distinct(year, DOW, species, .keep_all = TRUE)
     
     req(nrow(tmp) > 0) #BAIL IF OVER-FILTERED
     

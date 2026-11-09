@@ -335,7 +335,7 @@ div(
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
 HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center, University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>, under the current direction of <address><a href='mailto:XXX@umn.edu'>XXX (XXX@umn.edu)</a></address>.<br>
-App last updated Nov. 6 2026. Version 0.0.3. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
+App last updated Nov. 6 2026. Version 0.0.4. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"

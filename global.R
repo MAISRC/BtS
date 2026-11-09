@@ -42,6 +42,7 @@ make_infest_graph = function(currDF, pal2use) { #CURRDF HERE IS ALREADY SUMMARIZ
     x = ~year,
     color = ~species,
     colors = pal2use,
+    name = ~stringr::str_to_sentence(as.character(species)),
     type = "scatter",
     mode = "lines+markers",
     hoverinfo = "text",
@@ -62,6 +63,7 @@ make_infest_graph = function(currDF, pal2use) { #CURRDF HERE IS ALREADY SUMMARIZ
                         tickfont = list(family = "Open Sans", color='black', size = 14),
                         fixedrange = TRUE
            ))
+
 }
  
 # LOAD NECESSARY INPUTS -------------------------------------------
@@ -83,7 +85,7 @@ allInvasivesList = read.csv("inputs/Static/invasives_list_revised_2026.csv")
 # polys = read_sf("H:\\Shared drives\\MAISRC\\Quantification, Data, and Computation\\Projects\\Hansen lab EWM SDM Project\\Hansen EWM Viz\\data\\dnr_hydro_features_all.shp")
 # 
 # polys2 = polys %>%
-#   filter(!is.na(dowlknum), outside_mn != "Y") %>%
+#   filter(!is.na(dowlknum), outside_mn != "Y") %>% #IRRELEVANT FOR OUR PURPOSES
 #   rename(DOW = dowlknum) %>%
 #   select(DOW, geometry, COUNTY = cty_name, LAKE_NAME = map_label, center_utm, center_u_1, LAKE_SIZE = acres) %>%
 #   st_simplify(preserveTopology = TRUE,
@@ -97,10 +99,16 @@ allInvasivesList = read.csv("inputs/Static/invasives_list_revised_2026.csv")
 # #THERE IS ONE ERRANT VALUE IN THE LAKE CENTROID DATA FOR GULL LAKE IN CASS COUNTY.
 # polys2$center_utm[polys2$DOW == "11030500"] = 396218 #THIS, FROM CODEX, SHOULD FIX IT.
 # 
-#SOME DOWS HAVE NO NAMES
+# #SOME DOWS HAVE NO NAMES
 # polys2$LAKE_NAME[is.na(polys2$LAKE_NAME)] = "Unnamed"
 # 
-# saveRDS(polys2, "inputs/Static/allMNlakepolygons.rds")
+# 
+# #NOW, COLLAPSE TO LARGEST POLYGON FOR EACH DOW SO AS TO NOT GET DUPLICATES.
+# polys3 = polys2 %>%
+#   filter(LAKE_SIZE == max(LAKE_SIZE), .by = "DOW") %>% 
+#   distinct(DOW, .keep_all = TRUE) #THE ABOVE DOESN'T QUITE ELIMINATE EVERY DUPE, SO THIS CLEANS UP THE REST.
+# 
+# saveRDS(polys3, "inputs/Static/allMNlakepolygons.rds")
 
 #MORE COMPLEX VERSION FOR JOINING IN NON-MN DATABASES
 lakesDB = readRDS("inputs/Static/allMNlakepolygons.rds")
@@ -113,7 +121,7 @@ lakesDB = readRDS("inputs/Static/allMNlakepolygons.rds")
 # 
 # lakesDBsimple = st_as_sf(lakesDBsimple, crs = 26915, coords = c("center_utm", "center_u_1"))
 # lakesDBsimple = st_transform(lakesDBsimple, crs = 4326)
-# 
+
 # saveRDS(lakesDBsimple, "inputs/Static/allMNlakecentroids.rds")
 
 lakesDBsimple = readRDS("inputs/Static/allMNlakecentroids.rds")
@@ -138,40 +146,18 @@ pub_accesses = readRDS("inputs/Static/pub_accesses.rds")
 ## CLEANED, CURRENT IWL -------------------------------------------
 
 #RUN LATEST VERSION OF MNDNR IWL CLEANING CODE FROM MY GITHUB
-url = "https://raw.githubusercontent.com/MAISRC/MNDNR_IWL/refs/heads/main/MNDNR_IWF_Transformation.qmd"
+suppressWarnings(knitr::purl("Rcode/Markdown/MNDNR_IWF_Transformation.qmd", 
+                             output = "temp_script.R", documentation = 0, quiet = T))
 
-#REQUIRES TEMPORARILY WRITING PLAIN VERSIONS OF THE QMD FILE AND THE R CODE IN IT
-qmd_file = tempfile(fileext = ".qmd")
-r_file = tempfile(fileext = ".R")
+unlink("temp_script.R")
 
-download.file(url, destfile = qmd_file, mode = "wb", quiet = TRUE)
-
-# PURL TRANSFERS JUST THE R CODE OVER TO A NEW FILE TO BE SOURCED.
-knitr::purl(
-  input = qmd_file,
-  output = r_file,
-  documentation = 0,
-  quiet = TRUE
-)
-
-#THEN, RUN THAT R CODE TO PRODUCE THE FILE THE APP WANTS.
-source(r_file, local = TRUE, echo = FALSE)
-
-IWL = readr::read_csv("infestedWaters_cleanedNInclusive.csv", 
-                     col_select = c(DOW, species, year = confirmed_year_inc, connected),
-                     col_types = readr::cols( #MORE FORMAL, FOR WHEN WE'RE SELECTING COLUMNS ALSO.
-                       DOW = readr::col_character(), #BY BRINGING THIS IN AS CHARACTER, I NO LONGER HAVE TO REPAIR THE DOWS FOR LEADING 0S!
-                       species = readr::col_character(),
-                       confirmed_year_inc = readr::col_integer(),
-                       connected = readr::col_logical()
-                     )) %>% 
+IWL = infestedWaters %>% 
+  dplyr::select(DOW, species, connected, year = confirmed_year_inc) %>% 
   dplyr::filter(!is.na(DOW)) %>% #ELIMINATES NON-LAKES.
   dplyr::distinct(DOW, species, connected, year, .keep_all = TRUE) %>%  #ELIMINATE DUPLICATED RECORDS THAT REFLECT SEPARATE SUBBASINS GETTING INFESTED.
   dplyr::group_by(DOW, species, connected) %>% #IF THERE ARE MULTIPLE CONFIRMATIONS (MAYBE DUE TO THINGS LIKE SEPARATE YEARS FOR VELIGERS AND ADULTS), COLLAPSE TO THE FIRST OF THESE.
-  dplyr::summarize(year = first(year), .groups = "drop") %>% 
+  dplyr::summarize(year = min(year), .groups = "drop") %>% 
   dplyr::filter(connected == FALSE, .by = c(DOW, species)) #THEN, IF YOU HAVE AN INDEPENDENT CONFIRMATION OF A LAKE PREVIOUSLY LISTED DUE TO CONNECTIONS, KEEP ONLY THE CONFIRMATION VERSION.
-
-invisible(file.remove("infestedWaters_cleanedNInclusive.csv")) #OTHERWISE, THIS LINGERS IN MY ROOT DIRECTORY
 
 #JOIN CENTROID AND LAKE INFO TO IWL
 IWL_sf = left_join(IWL, lakesDBsimple, relationship = "many-to-one", by = "DOW") %>% 
@@ -189,18 +175,25 @@ piCharterSupp = readr::read_csv("inputs/MadeUpstream/PI_Charter_Positives.csv",
                                   taxon = readr::col_character(),
                                   FIRST_YEAR = readr::col_integer()
                                 ), name_repair = "minimal") %>%  #TO QUIET NEW NAMES WARNINGS.
-    dplyr::filter(!is.na(year)) #ONE INSTANCE IS COMING THRU OF A LAKE HAVING CLPW THAT IT DOESN'T ACTUALLY HAVE, ACCORDING TO THE LIVE VERSION OF THE APP...WORTH DOUBLE-CHECKING.
+    dplyr::filter(!is.na(year))  #***ONE INSTANCE IS COMING THRU OF A LAKE HAVING CLPW THAT IT DOESN'T ACTUALLY HAVE, ACCORDING TO THE LIVE VERSION OF THE APP...WORTH DOUBLE-CHECKING.
+ 
 
 piCharterSupp$species = tolower(piCharterSupp$species) #CASE MATCHING
 
 #TAXON MATCHING
 #***LUMPING THE HYBRIDS TOGETHER FOR SIMPLICITY.
 piCharterSupp$species[piCharterSupp$species == "hybrid water-milfoil"] = "eurasian water-milfoil" 
-piCharterSupp$species[piCharterSupp$species == "hybrid cattail"] = "narrow-leaved cattail" 
+piCharterSupp$species[piCharterSupp$species %in% c("hybrid cattail", "narrow-leaved")] = "narrow-leaved or hybrid cattail" 
 piCharterSupp$species[piCharterSupp$species == "curly pondweed"] = "curly-leaf pondweed"
 piCharterSupp$species[piCharterSupp$species == "eurasian water-milfoil"] = "Eurasian watermilfoil"
 
 piCharterSupp$source = "P.I. Charter Database"
+
+#WHEN THE TAXA GET LUMPED, AS ABOVE, IT CREATES THE POSSIBILITY OF FUNCTIONALLY DUPLICATE RECORDS. 
+
+piCharterSupp = piCharterSupp %>% 
+dplyr::filter(year == min(year), .by = c(DOW, species)) %>% 
+  distinct(DOW, species, year , .keep_all = TRUE) #THE ABOVE WOULDN'T GET RID OF SAME-YEAR COLLISIONS, SO THIS IS NEEDED TO DO SO.
 
 piCharterSupp_sf = left_join(piCharterSupp, lakesDBsimple, relationship = "many-to-one", by = "DOW")
 
@@ -210,24 +203,23 @@ IWL_allSources = bind_rows(IWL_sf, piCharterSupp_sf)
 
 ## CLEANED NAS DATABASE -------------------------------------------
 
-NAS_sf = readr::read_csv("inputs/Dynamic/NAS-Specimen-Download.csv",  #***ONLY TEMPORARY...
-                      col_select = c(species = `Scientific Name`, Latitude, 
-                                     Longitude, year = Year, Status),
+NAS_sf = readr::read_csv("https://raw.githubusercontent.com/MAISRC/BtS/main/inputs/Dynamic/NAS-current.csv",
+                      col_select = c(species, latitude, longitude, year, status),
                       col_types = readr::cols(
-                        `Scientific Name` = readr::col_character(),
-                        Latitude = readr::col_number(),
-                        Longitude = readr::col_number(),
-                        Year = readr::col_number(),
-                        Status = readr::col_character(),
+                        species = readr::col_character(),
+                        latitude = readr::col_number(),
+                        longitude = readr::col_number(),
+                        year = readr::col_number(),
+                        status = readr::col_character(),
                        )
                       ) %>% 
-  dplyr::filter(!Status %in% c("failed", "extirpated", "eradicated", "stocked"),#***SOMETHING OF A JUDGMENT CALL HERE.
-                !is.na(Latitude), !is.na(Longitude), #ONLY ONE OF THESE AT TIME OF WRITING. 
-                Longitude >= -97.22904, Longitude <= -89.48923, #ALSO SOME INVALID LAT/LONGS
-                Latitude >= 43.49952, Latitude <= 49.38436,
+  dplyr::filter(!status %in% c("failed", "extirpated", "eradicated", "stocked"),#***SOMETHING OF A JUDGMENT CALL HERE.
+                !is.na(latitude), !is.na(longitude), #ONLY ONE OF THESE AT TIME OF WRITING. 
+                longitude >= -97.22904, longitude <= -89.48923, #ALSO SOME INVALID LAT/LONGS
+                latitude >= 43.49952, latitude <= 49.38436,
                 !species %in% c("Dreissena sp.", "Helisoma sp.")) %>% 
-  dplyr::select(-Status) %>%  #DITCH IT NOW.
-  sf::st_as_sf(crs = 4326, coords = c("Longitude", "Latitude"))
+  dplyr::select(-status) %>%  #DITCH IT NOW.
+  sf::st_as_sf(crs = 4326, coords = c("longitude", "latitude"))
 
 #ADJUST SOME SPECIES NAMES FOR PROPER JOINING
 NAS_sf$species[NAS_sf$species == "Phragmites australis australis"] = "Phragmites australis"
@@ -265,14 +257,15 @@ NAS_joined = st_join(x = NAS_matches, y = lakesDB,
   st_drop_geometry() %>% #DITCH THE OBSERVATION GEOMETRY.
   st_as_sf(crs = 26915, coords = c("center_utm", "center_u_1")) %>% #CHANGE OVER TO THE LAKE CENTROID GEOMETRY.
   st_transform(crs = 4326) %>% 
-  distinct(species, year, DOW, geometry, .keep_all = TRUE) #UNCLEAR TO ME WHY THIS IS NEEDED--PROBABLY HAS T DO WITH THE ST_JOIN INTRODUCING DUPLICATES.
+  filter(year == min(year), .by = c(DOW, species)) %>% #THESE TWO COMMANDS COLLAPSE DOWN TO JUST THE FIRST OBSERVATIONS PER SPECIES PER WATERBODY.
+  distinct(DOW, species, .keep_all = TRUE)
 
 NAS_joined$source = "Nonindigenous Aquatic Species (NAS) Database"
 NAS_joined$connected = FALSE
 
 IWL_allSources = bind_rows(IWL_allSources, NAS_joined)
 
-# ### PRE-BAKE GLOBAL ENVIRONMENT OBJECTS ### -----------------------------
+# PRE-BAKE GLOBAL OBJECTS -----------------------------
 
 #SPECIES TO BE OPTIONALLY EXCLUDED DUE TO RARITY
 rares = IWL_allSources %>% 
