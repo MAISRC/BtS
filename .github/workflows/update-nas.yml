@@ -1,0 +1,61 @@
+name: Update NAS data
+
+on:
+  # Run every Monday at 11:17 UTC.
+  schedule:
+    - cron: "17 11 * * 1"
+
+  # Also allow manual runs from GitHub's Actions tab.
+  workflow_dispatch:
+
+# Allow the workflow to commit the updated CSV.
+permissions:
+  contents: write
+
+# Prevent two refreshes from running simultaneously.
+concurrency:
+  group: update-nas
+  cancel-in-progress: false
+
+jobs:
+  update-nas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install R packages
+        shell: Rscript {0}
+        run: |
+          install.packages(c("jsonlite", "dplyr"))
+
+      - name: Run NAS download script
+        shell: Rscript {0}
+        run: |
+          library(dplyr)
+          dir.create("inputs/Dynamic", recursive = TRUE, showWarnings = FALSE)
+          source("Rcode/Scripts/updateNAS.R")
+
+      - name: Commit updated CSV
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add inputs/Dynamic/NAS-current.csv
+
+          if git diff --cached --quiet; then
+            echo "NAS data have not changed."
+          else
+            git commit -m "Update cached NAS data"
+            git push origin HEAD:main
+          fi
