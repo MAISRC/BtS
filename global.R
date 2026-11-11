@@ -16,6 +16,7 @@ library(httr) #THESE FOUR, FOR READING IN AND PROCESSING THE IWL.
 library(readr)
 library(readxl)
 library(knitr)
+library(htmlwidgets) #FOR SAVEWIDGET
 
 # GLOBAL OPTIONS ------------------------------------------
 
@@ -159,13 +160,18 @@ IWL = infestedWaters %>%
   dplyr::distinct(DOW, species, connected, year, .keep_all = TRUE) %>%  #ELIMINATE DUPLICATED RECORDS THAT REFLECT SEPARATE SUBBASINS GETTING INFESTED.
   dplyr::group_by(DOW, species, connected) %>% #IF THERE ARE MULTIPLE CONFIRMATIONS (MAYBE DUE TO THINGS LIKE SEPARATE YEARS FOR VELIGERS AND ADULTS), COLLAPSE TO THE FIRST OF THESE.
   dplyr::summarize(year = min(year), .groups = "drop") %>% 
-  dplyr::filter(connected == FALSE, .by = c(DOW, species)) #THEN, IF YOU HAVE AN INDEPENDENT CONFIRMATION OF A LAKE PREVIOUSLY LISTED DUE TO CONNECTIONS, KEEP ONLY THE CONFIRMATION VERSION.
+  dplyr::mutate(nRecs = n(), .by = c(DOW, species)) %>% #THEN, IF YOU HAVE AN INDEPENDENT CONFIRMATION OF A LAKE PREVIOUSLY LISTED DUE TO CONNECTIONS, KEEP ONLY THE CONFIRMATION VERSION.
+  dplyr::filter(nRecs == 1 | (nRecs == 2 & connected == FALSE)) %>% 
+  dplyr::select(-nRecs)
 
 #JOIN CENTROID AND LAKE INFO TO IWL
 IWL_sf = left_join(IWL, lakesDBsimple, relationship = "many-to-one", by = "DOW") %>% 
   st_as_sf() #MAINTAIN THE SF STATUS
 
 IWL_sf$source = "MN DNR's Infested Waters List"
+
+#***COMBINE RELATED TAXA
+IWL_sf$species[IWL_sf$species == "Eurasian watermilfoil"] = "Eurasian or hybrid watermilfoil"
 
 ## CLEANED, CURRENT PI CHARTER GRAB -------------------------------------------
 
@@ -184,17 +190,16 @@ piCharterSupp$species = tolower(piCharterSupp$species) #CASE MATCHING
 
 #TAXON MATCHING
 #***LUMPING THE HYBRIDS TOGETHER FOR SIMPLICITY.
-piCharterSupp$species[piCharterSupp$species == "hybrid water-milfoil"] = "eurasian water-milfoil" 
-piCharterSupp$species[piCharterSupp$species %in% c("hybrid cattail", "narrow-leaved")] = "narrow-leaved or hybrid cattail" 
+piCharterSupp$species[piCharterSupp$species %in% c("hybrid water-milfoil", "eurasian water-milfoil")] = "Eurasian or hybrid watermilfoil" 
+piCharterSupp$species[piCharterSupp$species %in% c("hybrid cattail", "narrow-leaved cattail")] = "narrow-leaved or hybrid cattail" 
 piCharterSupp$species[piCharterSupp$species == "curly pondweed"] = "curly-leaf pondweed"
-piCharterSupp$species[piCharterSupp$species == "eurasian water-milfoil"] = "Eurasian watermilfoil"
 
 piCharterSupp$source = "P.I. Charter Database"
 
 #WHEN THE TAXA GET LUMPED, AS ABOVE, IT CREATES THE POSSIBILITY OF FUNCTIONALLY DUPLICATE RECORDS. 
 
 piCharterSupp = piCharterSupp %>% 
-dplyr::filter(year == min(year), .by = c(DOW, species)) %>% 
+  dplyr::filter(year == min(year), .by = c(DOW, species)) %>% 
   distinct(DOW, species, year , .keep_all = TRUE) #THE ABOVE WOULDN'T GET RID OF SAME-YEAR COLLISIONS, SO THIS IS NEEDED TO DO SO.
 
 piCharterSupp_sf = left_join(piCharterSupp, lakesDBsimple, relationship = "many-to-one", by = "DOW")
@@ -259,7 +264,7 @@ NAS_joined = st_join(x = NAS_matches, y = lakesDB,
   st_drop_geometry() %>% #DITCH THE OBSERVATION GEOMETRY.
   st_as_sf(crs = 26915, coords = c("center_utm", "center_u_1")) %>% #CHANGE OVER TO THE LAKE CENTROID GEOMETRY.
   st_transform(crs = 4326) %>% 
-  filter(year == min(year), .by = c(DOW, species)) %>% #THESE TWO COMMANDS COLLAPSE DOWN TO JUST THE FIRST OBSERVATIONS PER SPECIES PER WATERBODY.
+  filter(year == min(year), .by = c(DOW, species)) %>%  #THESE TWO COMMANDS COLLAPSE DOWN TO JUST THE FIRST OBSERVATIONS PER SPECIES PER WATERBODY.
   distinct(DOW, species, .keep_all = TRUE)
 
 NAS_joined$source = "Nonindigenous Aquatic Species (NAS) Database"
@@ -271,8 +276,9 @@ IWL_allSources = bind_rows(IWL_allSources, NAS_joined)
 
 #SPECIES TO BE OPTIONALLY EXCLUDED DUE TO RARITY
 rares = IWL_allSources %>% 
-  group_by(species) %>% 
-  summarize(n = n()) %>% 
+  st_drop_geometry() %>% 
+  distinct(DOW, species, .keep_all = TRUE) %>%  #YOU JUST NEED ONE SPECIES/DOW PAIRING FOR THIS, IRRESPECTIVE OF YEAR.
+  summarize(n = n(), .by = species) %>% 
   filter(n < 10) %>% 
   pull(species) %>% 
   unname() #***UNCLEAR WHY THESE ARE NAMED
@@ -292,14 +298,19 @@ spp_pal_one = viridis(
 
 names(spp_pal_one) = unique(IWL_allSources$species)
 
+#STARTING SPECIES CHOICES
+taxa2pick = sort(unique(IWL_allSources$species))
+names(taxa2pick) = stringr::str_to_sentence(taxa2pick) #NICER NAMES
 
 ## STARTING DF -------------------------------------------------------------
 #EFFECTS OPINIONATED STARTING CONDITIONS SET BY ME
 excludeRaresStart = TRUE
 startingYear = 1987
+startingKnown = 50
+startingHabitability = 50
+startingCounties = sort(unique(IWL_allSources$COUNTY))
 
 startingDF = IWL_allSources %>% 
   dplyr::filter(
-    if(excludeRaresStart) { species %in% setdiff(unique(species), rares) } else { TRUE },
-    year >= startingYear
+    if(excludeRaresStart) { species %in% setdiff(unique(species), rares) } else { TRUE }
     )

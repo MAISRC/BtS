@@ -280,8 +280,6 @@ input[type="checkbox"] {
   height: 20px;
 }
 
-
-
 /* ### ADJUSTING DT TABLES ### */
 
 /* THIS RULE AFFECTS ANY DT TABLES INCLUDED IN THE APP. HERE, I SET THE BACKGROUND TO OFFWHITE, THE FONT TO BLACK, THE FONT SIZE TO A BIT SMALLER, AND ADD SOME PADDING AND MARGINING. */
@@ -292,8 +290,6 @@ div.datatables {
   margin-bottom: 2%;
   font-size: 80%;
 }
-
-
 
 /* ### CONVENIENCE CLASSES FOR QUICK, COMMON AESTHETIC CHANGES ### */
 
@@ -318,10 +314,6 @@ div.datatables {
   flex-wrap: wrap;
 }
 
-
-#infest_graph_div {
-  max-width: 80%;
-}
 .autoleftrightmarg {
   margin-left: auto;
   margin-right: auto;
@@ -343,16 +335,12 @@ div.datatables {
   font-style: italic;
 }
 
-
-
 /* ### MEDIA QUERIES ### */
 
 /* THE FOLLOWING IS JUST AN EXAMPLE OF A MEDIA QUERY, WHICH CAN BE USED TO CONDITIONALLY APPLY STYLING WHEN ON CERTAIN DEVICES OR WHEN THE USER'S SCREEN IS A CERTAIN SIZE. */
 @media (max-width: 767px) {
 
 }
-
-
 
 /* ### ADJUSTING LEAFLET MAPS ### */
 
@@ -361,7 +349,7 @@ a.leaflet-control-zoom-out, a.leaflet-control-zoom-in {
   color: #8C8C8C !important;
 }
 
-
+/* ### BESPOKE STYLE FOR SPECIFIC ELEMENTS   ### */
 #saturation_percentage {
   font-size: 500%;
   color: #900021;
@@ -372,4 +360,32 @@ a.leaflet-control-zoom-out, a.leaflet-control-zoom-in {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+#infest_graph_div, #scope_filtering_div {
+  max-width: 80%;
+  width: 80%;
+}
+
+span.irs-grid-text, span.irs-min, span.irs-max {
+  font-size: 75% !important;
+}
+
+span.irs-from, span.irs-to {
+  color: #900021 !important;
+  background-color: #FAFAFA !important;
+}
+
+span.irs-bar {
+  border-top: #900021 !important;
+  border-bottom: #900021 !important;
+  background: #900021 !important;
+}
+
+/* THE COMBO HERE IS IMPORTANT. SET A MAX-WIDTH AND THEN FORCE IT TO BE AT LEAST AS WIDE AS NEEDED TO FIT THE CONTENT. WHITESPACE PREVENTS NO WRAP, WHILE OVERFLOW-WRAP FORCES THE WRAP WHEN MAX-WIDTH IS HIT. */
+.leaflet-tooltip {
+  max-width: 250px !important;
+  width: max-content;
+  white-space: normal;
+  overflow-wrap: break-word;
 }

@@ -244,9 +244,13 @@ connected_df = connected_df %>%
 For all the remaining, more formulaic substrings, we attempt to convert them into simply the DOW \# information contained inside their parentheticals:
 
 ```{r to DOWs}
-connected_df = connected_df %>% 
+connected_df = connected_df %>%
   dplyr::mutate(
-    sub = dplyr::if_else(is.na(to), as.character(sub(".*\\(([^)]*)\\).*", "\\1", from)), NA) 
+    sub = dplyr::if_else(
+      is.na(to),
+      stringr::str_match(from, "[(]([^()]*)[)]")[, 2], #SLIGHT MATCHING IMPROVEMENT FROM CODEX.
+      NA_character_
+    )
   ) #THIS WILL RECOGNIZE AND KEEP ONLY THE CONTENTS OF THE FIRST ENCOUNTERED PARENTHETICAL.
 ```
 
@@ -269,78 +273,42 @@ connected_df = connected_df %>%
 Now, for those waterbodies wherein we have a `sub` value and no `to` values, we do a loop to link these to the appropriate years and species (if we can):
 
 ```{r match connected DOWs to years}
-easyMatches = connected_df$sub[!is.na(connected_df$sub) & connected_df$sub %in% infestedWaters$DOW] #THESE ARE THE DOWS THAT SHOULD BE EASY TO MATCH BECAUSE THEY ARE LISTED IN THE INFESTED WATERS LIST'S DOW COLUMN ALSO.
+#CODEX REPLACED THIS CHUNK FOR ME BECAUSE IT SAID I WAS POTENTIALLY RELYING TOO MUCH ON A CONSTANT SPECIES ORDER TO MATCH ROWS CORRECTLY AND THIS WAY IS UNAMBIGUOUS. NEED TO STUDY IT.
+#GET THE UNAMBIGUOUS YEAR FOR EACH LAKE + SPECIES.
+year_lookup = infestedWaters %>%
+  filter(!is.na(DOW), !is.na(confirmed_year)) %>%
+  summarize(
+    to = if(n_distinct(confirmed_year) == 1) {
+      first(confirmed_year)
+    } else { NA_real_ },
+    .by = c(DOW, species)
+  )
 
-for(i in 1:length(easyMatches)) { #FOR EACH OF THOSE...
-  
-  currDOW = easyMatches[i] #CURRENT DOW TO MATCH
-  
-  connDFmatches = which(connected_df$sub == currDOW & !is.na(connected_df$sub)) #WHICH ROW IN THE CONNECTED_DF MATCHES THE DOW WE'RE ON?
-  
-  #WHERE DOES THIS DOW STRING WE'RE TRYING TO FIND THE MATCH FOR SHOWS UP IN THE INFESTEDWATERS DOC AS THE ACTUAL INFESTED LAKE?
-  infInvolvedDOWs = which(infestedWaters$DOW == currDOW) 
-  
-  #WHICH SPECIES IS THAT LAKE LISTED FOR?
-  invSpp = unique(infestedWaters$species[infInvolvedDOWs])
-  
-  #FOR WHICH SPECIES DOES THIS PROBLEMATIC CONNECTED_WB SUBSTRING OCCUR FOR FOR THIS LAKE?
-  matchSpp = unique(infestedWaters$species[infestedWaters$year_or_connected_wb %in% as.vector(na.omit(unique(connected_df$from[connDFmatches])))])
-  
-  #SO, WHICH SPECIES ARE SHARED AND THUS FORM THE INTERSECTION? WE NEED TO MATCH FOR EACH OF THESE SPECIES.
-  intersectSpp = intersect(invSpp, matchSpp)
-  
-  numSpp = length(intersectSpp) #HOW MANY SPECIES IS THAT? 
-  
-  if(numSpp == 0) { #SKIP IF NO MATCHING SPP.
-    next
-  }
-  
-  #IF IT'S JUST ONE...
-  if(numSpp == 1) {
-    
-    connected_df$species[connDFmatches] = intersectSpp #STORE THAT ONE SPECIES
-    
-    #GRAB THE CONFIRMED_YEAR VALUE FOR WHEN THIS SPECIFIC DOW GOT CONFIRMED FOR THIS SPECIFIC SPECIES. 
-    attemptedReplacement = as.vector(na.omit(unique(infestedWaters$confirmed_year[infestedWaters$DOW == currDOW &
-                                                                                    infestedWaters$species == intersectSpp[1]])))
-    connected_df$to[connDFmatches] = ifelse(length(attemptedReplacement) == 1, attemptedReplacement, NA)
-    
-  } else {
-    
-    #GO SPECIES BY SPECIES THAT WE NEED TO MATCH
-    for(sp in 1:numSpp) {
-      
-      if(sp == 1) { #IF WE'RE ON THE FIRST SPECIES, THEN IT'S SIMPLE--WE DO THE SAME THING AS ABOVE.
-        if(is.na(connected_df$species[connDFmatches[1]])) {
-          connected_df$species[connDFmatches[1]] = intersectSpp[1] 
-        }
-        
-        attemptedReplacement = as.vector(na.omit(unique(infestedWaters$confirmed_year[infestedWaters$DOW == currDOW &
-                                                                                        infestedWaters$species == intersectSpp[1]])))
-        connected_df$to[connDFmatches[1]] = ifelse(length(attemptedReplacement) == 1, attemptedReplacement, NA)
-        
-      } else {
-        
-        #IN SOME EDGE CASES, WE'VE ALREADY SET THE VALUES IN THE SPECIES COLUMNS, SO WE ALTER THE WORKFLOW HERE TO NOT OVERWRITE THOSE DATA. 
-        if(is.na(connected_df$species[connDFmatches[sp]])) {
-          
-          dupeRow = connected_df[connDFmatches[1], ] 
-          dupeRow$species = intersectSpp[sp] 
-          attemptedReplacement = as.vector(na.omit(unique(infestedWaters$confirmed_year[infestedWaters$DOW == currDOW &
-                                                                                          infestedWaters$species == intersectSpp[sp]])))
-          dupeRow$to = ifelse(length(attemptedReplacement) == 1, attemptedReplacement, NA)
-          connected_df = rbind(connected_df, dupeRow)
-          
-        } else {
-          #OTHERWISE, WE ESSENTIALLY CREATE A COPY OF THE ROW WE JUST MADE, CHANGING JUST THE SPECIES AND CONFIRMED_YEAR VALUES AND APPEND THOSE TO OUR WORKING DATA FRAME. 
-          attemptedReplacement = as.vector(na.omit(unique(infestedWaters$confirmed_year[infestedWaters$DOW == currDOW &
-                                                                                          infestedWaters$species == intersectSpp[sp]])))
-          connected_df$to[connDFmatches[sp]] = ifelse(length(attemptedReplacement) == 1, attemptedReplacement, NA)
-        }
-      }
-    }
-  }
-}
+#IDENTIFY WHICH SPECIES EACH CONNECTION DESCRIPTION APPLIES TO.
+connection_species = infestedWaters %>%
+  distinct(from = year_or_connected_wb, species)
+
+original = connected_df %>%
+  mutate(.row = row_number())
+
+matched = original %>%
+  filter(is.na(to)) %>%
+  select(.row, from, sub, original_species = species) %>%
+  inner_join(connection_species,
+             by = "from", relationship = "many-to-many") %>%
+  filter(is.na(original_species) | original_species == species) %>%
+  inner_join(year_lookup,
+             by = c("sub" = "DOW", "species"),
+             relationship = "many-to-one") %>%
+  select(-original_species)
+
+#REPLACE MATCHED ROWS; PRESERVE MANUAL AND UNRESOLVED ROWS.
+connected_df = bind_rows(
+  original %>% filter(!.row %in% matched$.row),
+  matched
+) %>%
+  arrange(.row) %>%
+  select(-.row)
 ```
 
 At this point, we've matched as many records as we can programmatically and need to handle any edge cases manually:

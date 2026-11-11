@@ -20,11 +20,13 @@ $(document).on('shiny:disconnected', function(event) {
       
       if (link) {
         const style = document.createElement('style');
+        //IN HERE, WE GET SOME CSS THAT WILL FORCE THE TEXT IN MY ADDRESS LINK TO ACTUALLY APPEAR--OTHERWISE, IT GETS SIZE 0 FROM SHINYDISCONNECT.
         style.textContent = `
          #ss-connect-dialog address a::before {
            content: none !important;
          }
          #ss-connect-dialog a#disconnectemail {
+         font-size: inherit !important;
          display: inline !important;
          margin-top: 0px !important;
          }
@@ -34,13 +36,32 @@ $(document).on('shiny:disconnected', function(event) {
 
       // Shift focus
       msgContainer.focus();
-      
-      // MAKE SURE THAT THE DISCONNECT LINK ALSO HAS TEXT IN IT:
-      $(document).ready(function() {
-      var reloadLink = document.getElementById('ss-reload-link');
-      if (reloadLink) {
-        reloadLink.innerText = 'Refresh the page';
-       }
-      });
+    }
+});
+
+      // MAKE SURE THAT THE DISCONNECT LINK ALSO HAS TEXT IN IT. THIS PUTS A ONE-TIME OBSERVER ON THAT FIRES ONCE AND THEN DIES ONLY ONCE THE LINK ACTUALLY EXISTS.
+$(document).ready(function() {
+  function fixReloadLink() {
+    var reloadLink = document.getElementById('ss-reload-link');
+
+    if (!reloadLink) return false;
+
+    reloadLink.textContent = 'Refresh the page';
+    return true;
+  }
+
+  // Fix it immediately if it already exists.
+  if (fixReloadLink()) return;
+
+  // Otherwise, watch for it to be inserted.
+  var observer = new MutationObserver(function() {
+    if (fixReloadLink()) {
+      observer.disconnect();
     }
   });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+   });
+});

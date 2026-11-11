@@ -6,7 +6,7 @@ ui = fluidPage(
   
   tags$html(lang = "en"), #SET THE PAGE LANGUAGE TO ENGLISH FOR SCREEN READERS. MUST BE DONE AS "HIGH" IN THE APP STRUCTURE AS POSSIBLE!
   
-#   ### LOAD IN OUTSIDE FILES ### -----------------------------------------
+# LOAD IN OUTSIDE FILES -----------------------------------------
   
   #LOAD IN OUR STYLE SHEET.
   tags$head(tags$link(
@@ -16,9 +16,7 @@ ui = fluidPage(
   ),
   
 
-## ### LOAD IN CONTEXT-DEPENDENT JS SCRIPTS ### ----------------------------
-
-#I'VE FOUND A LOT OF REASONS OVER MY TIME WITH SHINY TO INCORPORATE CUSTOM JS SCRIPTS TO ACCOMPLISH CERTAIN SPECIFIC THINGS. I LOAD THESE HERE (SITUATIONALLY). COMMENT OUT ANY THAT AREN'T RELEVANT.
+# LOAD IN JS SCRIPTS ----------------------------
 
   #LOAD IN GOOGLE ANALYTICS SCRIPT, IF USING.
     shiny::tags$script(
@@ -34,27 +32,6 @@ ui = fluidPage(
       src = "js/numInputsPreventNegsE.js"
     ),
 
-#JS FUNCTION THAT FORCES THE DATE PICKER POPUP THAT COMES ALONG WITH SHINY'S DATE SELECTOR TO BE A BIT ABOVE THE ACCOMPANYING TEXT BOX SO IT DOESN'T COVER UP THE TYPING BOX.
-  tags$script(
-    src = "js/preventDateInputOverlaps.js"
-  ),
-# 
-# #JS FUNCTION THAT FIXES MULTIPLE ACCESSIBILITY ISSUES WITH DT TABLES.
-# tags$head(
-#   tags$script(
-#     src = "js/improveDTTableA11y.js"
-#   )
-# ),
-
-# #UPON REFRESH, YOU WON'T AUTOMATICALLY COME BACK TO THE TOP OF THE PAGE. THIS WOULD TRIGGER THAT TO HAPPEN.
-# tags$head(
-#   tags$script(HTML("
-#   $(document).on('shiny:connected', function() {
-#       window.scrollTo(0, 0);
-#     });
-#   "))
-# ),
-
 #UPON DISCONNECT, ENSURE THAT FOCUS SHIFTS TO THE CUSTOM DISCONNECT MESSAGE AND THAT TEXT IS INSERTED INTO THE REFRESH LINK.
 tags$script(
   src = "js/shiftFocusOnDisconnect.js"
@@ -65,6 +42,55 @@ tags$script(
   src = "js/shinyLiveReportingRegion.js"
 )
 ),
+
+#THIS SCRIPT ENSURES THAT EVERY TIME THE LEAFLET MAP GETS REBORN ON THIS PAGE, IT GETS ARIA-HIDDEN AND LOSES KEYBOARD NAV.
+tags$script(HTML("
+  function scrubLeafletAccessibility() {
+    var tries = 0;
+    var maxTries = 20;
+
+    var interval = setInterval(function() {
+      var mapContainer = document.getElementById('infest_map');
+      if (!mapContainer) {
+        tries++;
+        if (tries >= maxTries) clearInterval(interval);
+        return;
+      }
+
+      // Confirm map is rendered enough to modify
+      var leafletSVG = mapContainer.querySelector('svg.leaflet-zoom-animated');
+
+      if (leafletSVG || tries >= maxTries) {
+        // Remove ARIA and tabindex from container
+        mapContainer.setAttribute('aria-hidden', 'true');
+        mapContainer.setAttribute('tabindex', '-1');
+        mapContainer.removeAttribute('aria-live');
+
+        // Remove all tabbable children (zoom buttons, links, etc.)
+        var focusables = mapContainer.querySelectorAll('a, button, [tabindex]');
+        focusables.forEach(function(el) {
+          el.setAttribute('tabindex', '-1');
+          el.setAttribute('aria-hidden', 'true');
+        });
+
+        clearInterval(interval);
+      }
+
+      tries++;
+    }, 300);
+  }
+
+  // Run once Shiny has booted
+  document.addEventListener('DOMContentLoaded', function() {
+    // Also re-run if map is re-rendered (optional hook if dynamic)
+    Shiny.addCustomMessageHandler('scrubLeafletMap', function(msg) {
+      scrubLeafletAccessibility();
+    });
+
+    // Run it now (initial map load)
+    scrubLeafletAccessibility();
+  });
+")),
 
 # ### ENABLING OPTIONAL FUNCTIONALITY ### ------------------------------------------
 
@@ -133,20 +159,41 @@ tags$main(
 
 ### INFESTATION MAP DIV ---------------------------------------------------------
 
-div(
+tags$section(
   id = "infest_map_div",
   h2("Which lakes are invaded with which taxa?"),
   
   #### INFESTATION MAP ---------------------------------------------------------
   tags$figure(
-    tags$figcaption("Map showing lakes (points) with confirmed infestations given your current input selections. Hover points for more information. "),
+    tags$figcaption("Map showing lakes (points) with confirmed infestations given your current input selections (see next section). Hover points for more information."),
+    downloadButton("download_map_records", 
+                   label = HTML("Download the map data in CSV format."), 
+                   icon = NULL, 
+                   class = "link-style-btn", 
+                   style = "padding: 0; border: none; background: none; cursor: pointer; text-align: left; margin-bottom: 10px; display: inline; margin-left: auto; margin-right: auto; text-wrap: wrap;"),
+    br(),
+    downloadButton("map_HTML_download", 
+                   label = HTML("Download the current map data as an HTML file."), 
+                   icon = NULL, 
+                   class = "link-style-btn", 
+                   style = "padding: 0; border: none; background: none; cursor: pointer; text-align: left; margin-bottom: 10px; display: inline; margin-left: auto; margin-right: auto; text-wrap: wrap;"),
     leafletOutput("infest_map", width = "100%", height = "450px"),
-  ),
-  
-  #### SCOPE FILTERING FIELDSET ---------------------------------------------------------
+  )
+),
 
+hr(),
+br(),
+
+### SCOPE FILTERING FIELDSET ---------------------------------------------------------
+
+tags$section(
+  id = "scope_filtering_div",
+  h2("Which lakes and taxa are we concerned with?"),
+  
+  uiOutput("overfiltering_warning"), 
+  
 tags$fieldset(
-  tags$legend("Control which infestations are mapped"),
+  tags$legend("Control which infestations are considered throughout the dashboard."),
   
   fluidRow(
     style = "width: 100%;",
@@ -155,25 +202,29 @@ tags$fieldset(
            
            pickerInput("infest_spp", 
                        label = "Invader(s)",
-                       choices = sort(unique(IWL_allSources$species)), 
-                       selected = unique(startingDF$species), #ASSUMES EXCLUDES RARES IS CHECKED TO START. SEE GLOBAL.R.
+                       choices = taxa2pick, #SEE GLOBAL.R
+                       selected = unique(startingDF$species), #SEE GLOBAL.R.
                        multiple = TRUE, 
                        options = pickerOptions(actionsBox = TRUE, 
                                                selectedTextFormat = "count > 2",
                                                countSelectedText = "{0} selected"
                        )
            ),
+           stripPickerDuplicateTitles("infest_spp"),
+           suppressNativeSelectAccessibility("infest_spp"),
            
            pickerInput("infest_ctys", 
                        label = "County(ies)",
-                       choices = sort(unique(IWL_allSources$COUNTY[!grepl(",", IWL_allSources$COUNTY)])), 
-                       selected = unique(IWL_allSources$COUNTY[!grepl(",", IWL_allSources$COUNTY)]), 
+                       choices = startingCounties, 
+                       selected = startingCounties, 
                        multiple = TRUE, 
                        options = pickerOptions(actionsBox = TRUE, 
                                                selectedTextFormat = "count > 2",
                                                countSelectedText = "{0} selected"
                        )
            ),
+           stripPickerDuplicateTitles("infest_ctys"),
+           suppressNativeSelectAccessibility("infest_ctys"),
            
            pickerInput("infest_source", 
                        label = "Source database(s)",
@@ -184,11 +235,13 @@ tags$fieldset(
                                                selectedTextFormat = "count > 2",
                                                countSelectedText = "{0} selected"
                        )
-           )
+           ),
+           stripPickerDuplicateTitles("infest_source"),
+           suppressNativeSelectAccessibility("infest_source"),
            
     ), #END FIRST COL
     
-    column(width = 4, offset = 1, 
+    column(width = 4, offset = 2, 
   
   sliderInput("infest_years", 
               label = "Year confirmed", 
@@ -215,20 +268,25 @@ tags$fieldset(
    ) #END FLUID ROW
   ) #END FIELD SET
 
- ), #END MAP DIV
+ ), #END SCOPE FILTERING DIV
 
 hr(),
 br(),
 
 ### CHANGE GRAPH DIV ---------------------------------------------------------
 
-div(
+tags$section(
   id = "infest_graph_div",
   h2("How have the rates of new infestations changed over time?"),
   
   #### CHANGE GRAPH ---------------------------------------------------------
   tags$figure(
     tags$figcaption("Line graph showing the numbers of new confirmed infestations (#s of waterbodies with DOW numbers; y-axis) per year (x-axis) by invasive species (colors). Lines can be hovered for more information. Double-click a legend key to select just a single line; single-click to remove a line."),
+    downloadButton("chgovertime_download", 
+                   label = HTML("Download the current graph as an HTML file."), 
+                   icon = NULL, 
+                   class = "link-style-btn", 
+                   style = "padding: 0; border: none; background: none; cursor: pointer; text-align: left; margin-bottom: 10px; display: inline; margin-left: auto; margin-right: auto; text-wrap: wrap;"),
     plotlyOutput("infest_graph", width = "100%", height = "500px")
   ) #END FIG
 ), #END GRAPH DIV
@@ -238,7 +296,7 @@ br(),
 
 ### SATURATION DIV ---------------------------------------------------------
 
-div(
+tags$section(
   id = "saturation_div",
   h2("How \"saturated\" with invaders are Minnesota's lakes?"),
   
@@ -289,32 +347,44 @@ div(
     tags$legend("Use these additional toggles to set your assumptions about how invadable MN lakes are and how many invasions we know about. Use the selectors earlier in the app to control which taxa, regions, and waterbodies are included."),
     numericInput("habitability_selector",
                  label = "% of lakes habitable", 
-                 value = 50, 
+                 value = startingHabitability, #SEE GLOBAL.R
                  min = 0, 
                  max = 100, 
                  step = 1
                  ),
     numericInput("known_selector",
                  label = "% of true infestations known", 
-                 value = 50, 
+                 value = startingKnown, #SEE GLOBAL.R
                  min = 0, 
                  max = 100, 
                  step = 1
-                 )
+                 ),
+    checkboxInput("saturation_byarea",
+                  label = "Calculate saturation by total lake area instead (X% of a lake's area, including non-littoral area, assumed infested, where X = your % of lakes habitable value. Lake Superior excluded.)", 
+                  value = FALSE)
    )
-  ),
+  ), #END COL 1
   column(width = 4, offset = 1,
          
     #### SATURATION ESTIMATE ---------------------------------------------------------
     tags$figure(
-      tags$figcaption(
-        "Text displaying the approximate percentage of Minnesota lakes invaded (# known + unknown invasions per lake and taxon / # lakes * # species)."
-      ),
+      uiOutput("saturation_caption"),
       textOutput("saturation_percentage"),
       textOutput("saturation_context")
     )
-
-  )
+  ) #END COL 2
+ ), #END FLUID ROW
+ fluidRow(
+   #### SATURATION OVER TIME GRAPH ---------------------------------------------------------
+   tags$figure(
+     uiOutput("saturation_figcaption"),
+     downloadButton("satovertime_download", 
+                    label = HTML("Download the current graph as an HTML file."), 
+                    icon = NULL, 
+                    class = "link-style-btn", 
+                    style = "padding: 0; border: none; background: none; cursor: pointer; text-align: left; margin-bottom: 10px; display: inline; margin-left: auto; margin-right: auto; text-wrap: wrap;"),
+     plotlyOutput("saturation_overtime")
+   )
  )
 ),
 
@@ -322,7 +392,7 @@ hr(),
 br(), 
 
 ### FURTHER INFO DIV ---------------------------------------------------------
-div(
+tags$section(
   id = "info_area_div",
   downloadLink("invasives_list",
                label = "Download a CSV file of all taxa we're considering invasive")
@@ -335,7 +405,7 @@ div(
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
 HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center, University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>, under the current direction of <address><a href='mailto:XXX@umn.edu'>XXX (XXX@umn.edu)</a></address>.<br>
-App last updated Nov. 6 2026. Version 0.0.4. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
+App last updated Nov. 11 2026. Version 0.0.5. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"
