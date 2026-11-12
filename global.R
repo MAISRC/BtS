@@ -68,9 +68,6 @@ make_infest_graph = function(currDF, pal2use) { #CURRDF HERE IS ALREADY SUMMARIZ
 }
  
 # LOAD NECESSARY INPUTS -------------------------------------------
-# 
-# dows_lakenames_counties = read.csv("inputs/Static/dows_lakenames_counties.csv", 
-#                                    colClasses = "character")
 
 ## BASIC INPUTS -------------------------------------------
 
@@ -84,17 +81,20 @@ allInvasivesList = read.csv("inputs/Static/invasives_list_revised_2026.csv")
 
 # OBJECT CONTAINING LAKE POLYGONS, DOWS, COUNTIES, WB_NAMES, CENTROIDS, AND ACREAGE.
 # polys = read_sf("H:\\Shared drives\\MAISRC\\Quantification, Data, and Computation\\Projects\\Hansen lab EWM SDM Project\\Hansen EWM Viz\\data\\dnr_hydro_features_all.shp")
-# 
+
+
+#I CHOSE TO BE PRETTY LOOSE IN MY KEEPING OF SELECT WATERBODY TYPES SO THAT WE INCLUDE THINGS WITH A MORE TERRESTRIAL BENT AND ALSO SO THAT THE USER CAN BE THE ONE TO DETERMINE HOW THEY WANT TO FILTER THESE BY, IF AT ALL. 
 # polys2 = polys %>%
 #   filter(!is.na(dowlknum), outside_mn != "Y") %>% #IRRELEVANT FOR OUR PURPOSES
 #   rename(DOW = dowlknum) %>%
-#   select(DOW, geometry, COUNTY = cty_name, LAKE_NAME = map_label, center_utm, center_u_1, LAKE_SIZE = acres) %>%
+#   filter(wb_class %in% c("Lake or Pond", "Wetland", "Intermittent Water", "Riverine polygon", "Reservoir",   "Artificial Basin")) %>% 
+#   select(DOW, geometry, COUNTY = cty_name, LAKE_NAME = map_label, center_utm, center_u_1, LAKE_SIZE = acres, wb_class) %>%
 #   st_simplify(preserveTopology = TRUE,
 #               dTolerance = 50) %>%
 #   st_transform(crs = 4326) %>%
 #   st_make_valid() #MAKE SURE ALL THE POLYGON EDGES ARE OK AFTER SIMPLIFICATION
 # 
-# #GET RID OF SUBBASINS
+# # #GET RID OF SUBBASINS
 # polys2$DOW[str_sub(polys2$DOW, 7, 8) != "00"] = paste0(str_sub(polys2$DOW[str_sub(polys2$DOW, 7, 8) != "00"], 1, 6), "00")
 # 
 # #THERE IS ONE ERRANT VALUE IN THE LAKE CENTROID DATA FOR GULL LAKE IN CASS COUNTY.
@@ -106,9 +106,9 @@ allInvasivesList = read.csv("inputs/Static/invasives_list_revised_2026.csv")
 # 
 # #NOW, COLLAPSE TO LARGEST POLYGON FOR EACH DOW SO AS TO NOT GET DUPLICATES.
 # polys3 = polys2 %>%
-#   filter(LAKE_SIZE == max(LAKE_SIZE), .by = "DOW") %>% 
+#   filter(LAKE_SIZE == max(LAKE_SIZE), .by = "DOW") %>%
 #   distinct(DOW, .keep_all = TRUE) #THE ABOVE DOESN'T QUITE ELIMINATE EVERY DUPE, SO THIS CLEANS UP THE REST.
-# 
+
 # saveRDS(polys3, "inputs/Static/allMNlakepolygons.rds")
 
 #MORE COMPLEX VERSION FOR JOINING IN NON-MN DATABASES
@@ -122,8 +122,8 @@ lakesDB = readRDS("inputs/Static/allMNlakepolygons.rds")
 # 
 # lakesDBsimple = st_as_sf(lakesDBsimple, crs = 26915, coords = c("center_utm", "center_u_1"))
 # lakesDBsimple = st_transform(lakesDBsimple, crs = 4326)
-
-# saveRDS(lakesDBsimple, "inputs/Static/allMNlakecentroids.rds")
+# 
+#  saveRDS(lakesDBsimple, "inputs/Static/allMNlakecentroids.rds")
 
 lakesDBsimple = readRDS("inputs/Static/allMNlakecentroids.rds")
 
@@ -305,12 +305,16 @@ names(taxa2pick) = stringr::str_to_sentence(taxa2pick) #NICER NAMES
 ## STARTING DF -------------------------------------------------------------
 #EFFECTS OPINIONATED STARTING CONDITIONS SET BY ME
 excludeRaresStart = TRUE
+excludeSmallStart = TRUE
 startingYear = 1987
 startingKnown = 50
 startingHabitability = 50
 startingCounties = sort(unique(IWL_allSources$COUNTY))
+startingWBTypes = c("Lake or Pond", "Reservoir", "Riverine polygon", "Wetland")
 
 startingDF = IWL_allSources %>% 
   dplyr::filter(
-    if(excludeRaresStart) { species %in% setdiff(unique(species), rares) } else { TRUE }
-    )
+    if(excludeRaresStart) { species %in% setdiff(unique(species), rares) } else { TRUE },
+    if(excludeSmallStart) { LAKE_SIZE >= 10 } else { TRUE },
+    wb_class %in% startingWBTypes
+)

@@ -1,0 +1,69 @@
+EDDMapS taxon crosswalk
+Checked: November 12, 2026
+
+Source: inputs/Static/invasives_list_revised_2026.csv (128 taxa).
+The source is preserved. No occurrence dataset is downloaded by the matching script.
+
+EDDMapS-taxon-crosswalk.csv has one row per original source taxon.
+- scientific and common preserve the source names.
+- eddmaps_subject_ids is a semicolon-separated list of query identifiers.
+- eddmaps_name gives the corresponding EDDMapS canonical name or names.
+- query_ready indicates an identifier mapping, not occurrence availability.
+- match_status distinguishes exact matches, synonym redirects, independently
+  verified synonyms, scope changes, and unresolved names.
+- notes explains exceptions. API sources and external synonym evidence are linked.
+
+EDDMapS-taxon-queries.csv has one row per source taxon and query identifier.
+Use this table in a downloader; do not send the semicolon-delimited string as
+one subjectid. Query each identifier separately. Canonical and synonym IDs may
+return overlapping records, so deduplicate by EDDMapS objectid before discarding
+unneeded fields. Mapping identifiers are EDDMapS IDs, not NAS species IDs.
+
+Scope choices based on the source common names:
+- Myriophyllum spicatum includes the spicatum x sibiricum hybrid (65495).
+- Typha angustifolia includes Typha x glauca (12262).
+- Nonnative Phragmites uses European subspecies australis (59038) and its linked
+  synonym. The generic species ID 3062 is not automatically included because it
+  does not distinguish native and introduced plants. Additional invasive reports
+  under that generic ID would need record-level review.
+
+Five unresolved species have no selected identifier. Searches included scientific
+names, genus, common names, and epithets, plus Corophium curvispinum and enteric
+redmouth for the relevant exceptions. No genus-level or related-species codes
+were substituted. A no-match finding is not proof that the species is absent
+from every broader or unidentified record in EDDMapS.
+
+Reproduce from the project root, using an R installation with jsonlite:
+  Rscript upstream/Admin/EDDMapS/scripts/matchEDDMapSTaxa.R
+Use --refresh to replace cached API responses with a current taxonomy search.
+Reviewed scope and synonym exceptions live in EDDMapS-taxon-overrides.csv.
+The script reconsiders old unmatched exceptions if new exact matches become
+available. Other reviewed scope choices should be revisited if the input changes.
+
+Optional small occurrence-query verification:
+  Rscript upstream/Admin/EDDMapS/scripts/checkEDDMapSTaxa.R
+This checks one Minnesota record per identifier and writes
+upstream/Admin/EDDMapS/cache/EDDMapS-taxon-query-checks.csv. An empty response is recorded
+separately from an API error. It does not count all Minnesota occurrences or
+establish whether other records have coordinates. Occurrence status (positive,
+negative, treated, eradicated) is not filtered in these smoke checks.
+
+API: https://api.bugwoodcloud.org/v2
+Documentation: https://developers.bugwood.org/
+Minnesota query prefilter: state=27. This numeric code also matches other countries,
+including Tabasco, Mexico. Require a location label identifying Minnesota,
+United States; resolve blank location labels using the individual record country
+and state. FIPS prefixes alone also collide internationally. Character state
+names/abbreviations were not reliable. The full assessment applies this check.
+Earlier one-record smoke-check results used FIPS prefixes and are superseded by
+the geographically checked full assessment for occurrence availability.
+Pagination: page=1 onward. The documentation states 3000 rows, but the live API
+caps larger requests at 2000. Use the verified pagesize=1000 and continue until
+fewer than 1000 rows are returned. Parent queries can include subspecies; the
+assessment script verifies their taxonomy before accepting them.
+The API sends additional fields. A downloader should retain usable coordinates,
+observation dates/years, the source taxon mapping, and state. Only public records
+with usable geolocation can enter the requested final occurrence dataset.
+
+
+

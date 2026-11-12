@@ -1,0 +1,129 @@
+"scientific","common","mapped","downloaded_rows","excluded_non_minnesota","distinct_records","usable_records","missing_coordinates","missing_or_invalid_year","positive","treated","negative","eradicated","usable_positive_or_treated"
+"Alnus glutinosa","European alder",TRUE,24,0,24,23,1,0,23,0,1,0,22
+"Alosa pseudoharengus","Alewife",TRUE,45,0,45,45,0,0,45,0,0,0,45
+"Azolla pinnata","Feathered mosquito fern",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Batrachochytrium dendrobatidis","Amphibian chytrid fungus",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Batrachochytrium salamandrivorans","Salamander chytrid fungus",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Bithynia tentaculata","Faucet snail",TRUE,98,0,98,92,6,0,95,0,3,0,90
+"Bosmina coregoni","Whitefish waterflea",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Butomus umbellatus","Flowering rush",TRUE,388,0,388,375,13,10,380,2,5,1,370
+"Bythotrephes longimanus","Spiny waterflea",TRUE,92,0,92,91,1,0,91,0,1,0,90
+"Cabomba caroliniana","Carolina fanwort",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Callinina georgiana","Banded mystery snail",TRUE,474,0,474,454,18,2,471,0,3,0,451
+"Carassius auratus","Goldfish",TRUE,178,0,178,171,7,0,178,0,0,0,171
+"Carassius carassius","Crucian carp",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Carassius gibelio","Prussian carp",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Carex acutiformis","Lesser pond sedge",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Cercopagis pengoi","Fishhook waterflea",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Channa argus","Northern snakehead",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Channa maculata","Blotched snakehead",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Channa marulius","Bullseye snakehead",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Chelicorophium curvispinum","Caspian mud shrimp",FALSE,0,0,0,0,0,0,0,0,0,0,0
+"Cherax destructor","Yabby",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Cipangopaludina chinensis","Chinese mystery snail",TRUE,870,0,870,839,25,6,858,0,12,0,828
+"Cirsium palustre","Marsh thistle",TRUE,16,0,16,16,0,0,1,14,0,1,15
+"Clarias batrachus","Walking catfish",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Corbicula fluminea","Golden clam",TRUE,163,0,163,161,2,0,161,0,2,0,160
+"Cordylophora caspia","Freshwater hydroid",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Craspedacusta sowerbii","Freshwater jellyfish",TRUE,10,0,10,9,1,0,10,0,0,0,9
+"Crassula helmsii","Australian swamp stonecrop",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Ctenopharyngodon idella","Grass carp",TRUE,43,0,43,43,0,0,43,0,0,0,43
+"Cyprinus carpio","Common carp",TRUE,278,0,278,276,2,0,278,0,0,0,276
+"Daphnia lumholtzi","Lumholtz's waterflea",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Diaphanosoma fluviatile","River waterflea",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Dikerogammarus villosus","Killer shrimp",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Dreissena bugensis","Quagga mussel",TRUE,2,0,2,2,0,0,1,0,1,0,1
+"Dreissena polymorpha","Zebra mussel",TRUE,2762,0,2762,2712,50,0,1289,0,1473,0,1240
+"Echinogammarus ischnus","Ponto-Caspian scud",TRUE,1,0,1,1,0,0,1,0,0,0,1
+"Egeria densa","Brazilian waterweed",TRUE,12,0,12,10,2,2,3,0,9,0,1
+"Eichhornia azurea","Rooted water hyacinth",TRUE,9,9,0,0,0,0,0,0,0,0,0
+"Epilobium hirsutum","Hairy willowherb",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Faxonius rusticus","Rusty crayfish",TRUE,421,1,420,355,12,53,391,0,29,0,326
+"Filipendula ulmaria","Queen of the Meadow",TRUE,161,0,161,159,2,2,157,4,0,0,159
+"Frangula alnus","Glossy buckthorn",TRUE,1750,0,1750,1640,110,34,1483,58,205,4,1455
+"Gambusia affinis","Western mosquitofish",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Gambusia holbrooki","Eastern mosquitofish",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Gammarus tigrinus","Tiger scud",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Glyceria maxima","Reed sweetgrass",TRUE,1,0,1,1,0,0,1,0,0,0,1
+"Gymnocephalus cernua","Ruffe",TRUE,60,0,60,60,0,0,60,0,0,0,60
+"Hemimysis anomala","Bloody red shrimp",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Heterogen japonica","Japanese mystery snail",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Hydrilla verticillata","Hydrilla",TRUE,2,0,2,2,0,0,0,0,2,0,0
+"Hydrocharis morsus-ranae","European frog-bit",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Hydrocotyle ranunculoides","Floating marsh pennywort",TRUE,4,0,4,4,0,0,4,0,0,0,4
+"Hygrophila polysperma","Indian swampweed",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Hypophthalmichthys harmandi","Largescale silver carp",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Hypophthalmichthys molitrix","Silver carp",TRUE,37,0,37,37,0,0,37,0,0,0,37
+"Hypophthalmichthys nobilis","Bighead carp",TRUE,39,0,39,39,0,0,39,0,0,0,39
+"Ipomoea aquatica","Water spinach",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Iris pseudacorus","Yellow iris",TRUE,372,0,372,360,12,10,349,14,6,3,351
+"Juncus compressus","Round-fruited rush",TRUE,4,0,4,4,0,0,4,0,0,0,4
+"Lagarosiphon major","African oxygen weed",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Lates niloticus","Nile perch",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Limnoperna fortunei","Golden mussel",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Limnophila sessiliflora","Asian marshweed",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Lysimachia nummularia","Creeping jenny",TRUE,155,0,155,133,22,21,155,0,0,0,133
+"Lysimachia vulgaris","Garden yellow loosestrife",TRUE,18,0,18,16,2,2,17,1,0,0,16
+"Lythrum salicaria","Purple loosestrife",TRUE,8849,0,8849,8642,207,100,8417,142,217,73,8381
+"Lythrum virgatum","European wand loosestrife",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Marsilea quadrifolia","European water-clover",TRUE,3,0,3,3,0,0,3,0,0,0,3
+"Misgurnus anguillicaudatus","Oriental weatherfish",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Monochoria hastata","Arrowleaf false pickerelweed",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Monochoria vaginalis","Heartshape false pickerelweed",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Morone americana","White perch",TRUE,25,0,25,25,0,0,25,0,0,0,25
+"Mylopharyngodon piceus","Black carp",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Myosotis scorpioides","Aquatic forget-me-not",TRUE,220,0,220,201,19,19,220,0,0,0,201
+"Myriophyllum aquaticum","Parrot's feather",TRUE,6,0,6,6,0,0,1,0,5,0,1
+"Myriophyllum spicatum","Eurasian or hybrid watermilfoil",TRUE,1792,0,1792,1743,49,39,1720,20,51,1,1693
+"Najas minor","Brittle naiad",TRUE,26,0,26,25,1,1,21,0,5,0,20
+"Nasturtium officinale","Watercress",TRUE,204,0,204,140,64,64,204,0,0,0,140
+"Neoergasilus japonicus","Japanese ergasilid copepod",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Neogobius melanostomus","Round goby",TRUE,24,0,24,24,0,0,24,0,0,0,24
+"Nitellopsis obtusa","Starry stonewort",TRUE,138,0,138,131,7,0,78,0,60,0,72
+"Nymphaea alba","European white waterlily",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Nymphoides peltata","Yellow floating-heart",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Oenanthe javanica","Java waterdropwort",TRUE,21,0,21,21,0,0,19,1,0,1,20
+"Osmerus mordax","Rainbow smelt",TRUE,150,0,150,150,0,0,150,0,0,0,150
+"Ottelia alismoides","Ducklettuce",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Pacifastacus leniusculus","Signal crayfish",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Perca fluviatilis","European perch",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Perccottus glenii","Amur sleeper",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Petromyzon marinus","Sea lamprey",TRUE,30,0,30,30,0,0,30,0,0,0,30
+"Phalaris arundinacea","Reed canary grass",TRUE,21561,0,21561,21402,159,158,21555,5,1,0,21401
+"Phoxinus phoxinus","Eurasian minnow",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Phragmites australis","Nonnative common reed",TRUE,3663,0,3663,3544,119,69,1039,1415,319,890,2368
+"Pontederia crassipes","Water hyacinth",TRUE,42,31,11,11,0,0,6,0,5,0,6
+"Potamogeton crispus","Curly-leaf pondweed",TRUE,1506,0,1506,1392,103,104,1482,0,23,1,1369
+"Potamopyrgus antipodarum","New Zealand mudsnail",TRUE,6,0,6,6,0,0,6,0,0,0,6
+"Procambarus clarkii","Red swamp crayfish",TRUE,2,0,2,2,0,0,2,0,0,0,2
+"Procambarus virginalis","Marbled crayfish",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Proterorhinus nasalis","Eastern tubenose goby",FALSE,0,0,0,0,0,0,0,0,0,0,0
+"Proterorhinus semilunaris","Western tubenose goby",TRUE,5,0,5,5,0,0,5,0,0,0,5
+"Proterorhinus semipellucidus","Caspian tubenose goby",FALSE,0,0,0,0,0,0,0,0,0,0,0
+"Proterorhinus tataricus","Chornaya tubenose goby",FALSE,0,0,0,0,0,0,0,0,0,0,0
+"Pseudorasbora parva","Stone moroko",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Renibacterium salmoninarum","Bacterial kidney disease bacterium",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Rorippa sylvestris","Creeping yellowcress",TRUE,7,0,7,4,3,3,7,0,0,0,4
+"Rutilus rutilus","Roach",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Sagittaria sagittifolia","European arrowhead",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Salmo trutta","Brown trout",TRUE,75,0,75,75,0,0,75,0,0,0,75
+"Salvinia auriculata","Eared watermoss",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Salvinia biloba","Two-lobed watermoss",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Salvinia herzogii","Herzog's watermoss",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Salvinia molesta","Giant salvinia",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Sander lucioperca","Zander",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Scardinius erythrophthalmus","Rudd",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Schyzocotyle acheilognathi","Asian fish tapeworm",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Silurus glanis","Wels catfish",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Solanum tampicense","Wetland nightshade",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Sparganium erectum","Exotic bur-reed",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Sphaerium corneum","European fingernail clam",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Stratiotes aloides","Water soldier",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Tetracapsuloides bryosalmonae","Proliferative kidney disease parasite",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Tinca tinca","Tench",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Trachemys scripta elegans","Red-eared slider",TRUE,17,0,17,17,0,0,17,0,0,0,17
+"Trapa natans","Water chestnut",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Typha angustifolia","Narrow-leaved or hybrid cattail",TRUE,703,0,703,651,52,50,702,0,1,0,650
+"Typha laxmannii","Graceful cattail",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Valvata piscinalis","European valve snail",TRUE,0,0,0,0,0,0,0,0,0,0,0
+"Yersinia ruckeri","Enteric redmouth bacterium",FALSE,0,0,0,0,0,0,0,0,0,0,0

@@ -161,11 +161,11 @@ tags$main(
 
 tags$section(
   id = "infest_map_div",
-  h2("Which lakes are invaded with which taxa?"),
+  h2("Which waterbodies are invaded with which taxa?"),
   
   #### INFESTATION MAP ---------------------------------------------------------
   tags$figure(
-    tags$figcaption("Map showing lakes (points) with confirmed infestations given your current input selections (see next section). Hover points for more information."),
+    tags$figcaption("Map showing waterbodies (points) with confirmed infestations given your current input selections (see next section). Hover points for more information."),
     downloadButton("download_map_records", 
                    label = HTML("Download the map data in CSV format."), 
                    icon = NULL, 
@@ -188,7 +188,7 @@ br(),
 
 tags$section(
   id = "scope_filtering_div",
-  h2("Which lakes and taxa are we concerned with?"),
+  h2("Which waterbodies and taxa are we concerned with?"),
   
   uiOutput("overfiltering_warning"), 
   
@@ -239,6 +239,19 @@ tags$fieldset(
            stripPickerDuplicateTitles("infest_source"),
            suppressNativeSelectAccessibility("infest_source"),
            
+           pickerInput("wb_types", 
+                       label = "Waterbody types (as designated by the state)",
+                       choices = sort(unique(IWL_allSources$wb_class)), 
+                       selected = startingWBTypes, 
+                       multiple = TRUE, 
+                       options = pickerOptions(actionsBox = TRUE, 
+                                               selectedTextFormat = "count > 2",
+                                               countSelectedText = "{0} selected"
+                       )
+           ),
+           stripPickerDuplicateTitles("wb_types"),
+           suppressNativeSelectAccessibility("wb_types"),
+           
     ), #END FIRST COL
     
     column(width = 4, offset = 2, 
@@ -253,8 +266,12 @@ tags$fieldset(
   ),
   
   checkboxInput("exclude_conns", 
-                label = "Exclude records listed due to water connections, not independent confirmations (state statute says waterbodies connected to infested waterbodies are treated as infested whether these are confirmed or not (and confirmations rarely occur))", 
+                label = "Exclude records listed due to water connections, not independent confirmations (state statute says waterbodies connected to infested waterbodies are treated as infested whether these are confirmed or not (and confirmations rarely occur). Only relevant for the Infested Waters List.)", 
                 value = FALSE),
+  
+  checkboxInput("exclude_small_wbs", 
+                label = "Restrict to records from waterbodies >= 10 acres in size.", 
+                value = excludeSmallStart),
   
   checkboxInput("exclude_noaccess", 
                 label = "Exclude records from waterbodies without public motorized boat launches", 
@@ -262,7 +279,7 @@ tags$fieldset(
   
   checkboxInput("exclude_rares",
                 label = "Exclude taxa with few (< 10) known infestations",
-                value = TRUE)
+                value = excludeRaresStart)
 
      ) #END SECOND COL
    ) #END FLUID ROW
@@ -298,18 +315,18 @@ br(),
 
 tags$section(
   id = "saturation_div",
-  h2("How \"saturated\" with invaders are Minnesota's lakes?"),
+  h2("How \"saturated\" with invaders are Minnesota's inland waterbodies?"),
   
   #### SATURATION EXPLANATION ---------------------------------------------------------
   tags$section(
-    p("AIS spread prevention can only be effective if there are still invadable waterbodies that haven't yet been invaded and we can thus prevent them from becoming invaded. So, we might wonder: \"How close to fully invaded\" are Minnesota's lakes? Here, we define \"fully invaded\" as every (invadable) lake having every possible invader."),
+    p("AIS spread prevention can only be effective if there are still invadable waterbodies that haven't yet been invaded and we can thus prevent them from becoming invaded. So, we might wonder: \"How close to fully invaded\" are Minnesota's inland waterbodies? Here, we define \"fully invaded\" as every (invadable) waterbody having every possible invader."),
     p("As such, the answer to this important question depends on three main factors: "),
     tags$ul(
       tags$li("Which waterbodies, regions, and taxa are we considering?"),
       tags$li("What fraction of waterbodies is actually \"invadable?\", and"),
       tags$li("What fraction of all \"true\" invasions is known?")
     ),
-    p("We know not all lakes are even inhabitable (or colonizable) by all taxa and that the percentage that is inhabitable probably depends on the taxon. Research (Kanankege",
+    p("We know not all waterbodies are even inhabitable (or colonizable) by all taxa and that the percentage that is inhabitable probably depends on the taxon. Research (Kanankege",
       em("et al."), "2019 (",
       a("see here",
         href = "https://www.researchgate.net/publication/344694872_The_use_of_spatiotemporal_analytical_tools_to_inform_decisions_and_policy_in_One_Health_scenarios",
@@ -324,7 +341,7 @@ tags$section(
         target = "_blank",
         rel = "noopener"
       ),
-      ")) suggests that the percentage of lakes suitable for zebra mussel, starry stonewort, and Eurasian watermilfoil is likely between 30-70%, for example."
+      ")) suggests that the percentage of lakes, specifically, suitable for zebra mussel, starry stonewort, and Eurasian watermilfoil is likely between 30-70%, for example."
     ),
     p(
       "We also know that AIS surveillance and monitoring only catches so many infestations, especially when they are new and small. Because we can only count infestations we know about, the number of existing-but-unknown infestations is important to estimate. One estimate from neighboring Wisconsin from over a decade ago (Latzka",
@@ -337,16 +354,16 @@ tags$section(
       ),
       ")) suggested we may only know about as few as 25% of all existing infestations, though we'd like to think we know about a far greater percentage than that."
     ),
-    p("Lastly, the answer also depends on how what pool of waterbodies and taxa one considers. Do we include only lakes large enough to have motorized boat traffic (research suggests boats are the dominant cause of new infestations)? That have public, motorized boat launches? Do we include only relatively common or high-priority taxa?")
+    p("Lastly, the answer also depends on how what pool of waterbodies and taxa one considers. Do we include only waterbodies large enough to have motorized boat traffic (research suggests boats are the dominant cause of new infestations), such as those greater than approximately 10 acres? That have public, motorized boat launches? Do we include only relatively common or high-priority taxa?")
   ),
   fluidRow(
     column(width = 4, offset = 1,
            
   #### SATURATION ASSUMPTIONS ---------------------------------------------------------
   tags$fieldset(
-    tags$legend("Use these additional toggles to set your assumptions about how invadable MN lakes are and how many invasions we know about. Use the selectors earlier in the app to control which taxa, regions, and waterbodies are included."),
+    tags$legend("Use these additional toggles to set your assumptions about how invadable MN waterbodies are and how many invasions we know about. Use the selectors earlier in the app to control which taxa, regions, and waterbodies are included."),
     numericInput("habitability_selector",
-                 label = "% of lakes habitable", 
+                 label = "% of waterbodies habitable", 
                  value = startingHabitability, #SEE GLOBAL.R
                  min = 0, 
                  max = 100, 
@@ -360,7 +377,7 @@ tags$section(
                  step = 1
                  ),
     checkboxInput("saturation_byarea",
-                  label = "Calculate saturation by total lake area instead (X% of a lake's area, including non-littoral area, assumed infested, where X = your % of lakes habitable value. Lake Superior excluded.)", 
+                  label = "Calculate saturation by total waterbody area instead (X% of a waterbody's area, including non-littoral area, assumed infested, where X = your % of waterbodies habitable value. Lake Superior excluded.)", 
                   value = FALSE)
    )
   ), #END COL 1
@@ -405,7 +422,7 @@ tags$section(
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
 HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center, University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>, under the current direction of <address><a href='mailto:XXX@umn.edu'>XXX (XXX@umn.edu)</a></address>.<br>
-App last updated Nov. 11 2026. Version 0.0.5. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
+App last updated Nov. 12 2026. Version 0.0.6. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"

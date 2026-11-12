@@ -141,7 +141,9 @@ shinyServer(function(input, output, session) {
     
     #CALC TOTAL NUMBER OF WATERBODIES IN REGION UNDER CONSIDERATION
     filtered_wbs = lakesDBsimple %>% 
-      filter(COUNTY %in% startingCounties)
+      filter(COUNTY %in% startingCounties,
+             wb_class %in% startingWBTypes,
+             if(excludeSmallStart) { LAKE_SIZE >= 10 } else { TRUE })
 
       #CALC TOTAL NUMBER OF POSSIBLE INFESTATIONS: LAKES * TAXA BEING CONSIDERED
       total_possible_infestations = length(unique(filtered_wbs$DOW)) * length(unique(startingDF$species))
@@ -202,9 +204,9 @@ shinyServer(function(input, output, session) {
    
    output$saturation_caption = renderUI({
        tags$figcaption(
-         HTML("Text displaying the approx. % of MN lakes invaded. Calculation:<br>
-        (Known infestations (per lake + species) * (1/prop. true known infestations)) / <br>
-        ((Lakes * species) * prop. lakes habitable)")
+         HTML("Text displaying the approx. % of MN waterbodies invaded. Calculation:<br>
+        (Known infestations (per waterbody + species) * (1/prop. true known infestations)) / <br>
+        ((Waterbodies * species) * prop. waterbodies habitable)")
        )
    })
    
@@ -344,13 +346,16 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
                     input$exclude_conns, 
                     input$infest_ctys, 
                     input$infest_source, 
+                    input$wb_types,
                     input$exclude_noaccess, 
-                    input$exclude_rares
+                    input$exclude_rares,
+                    input$exclude_small_wbs
                     ), {
                       
                       if(any(length(input$infest_spp) == 0,
                              length(input$infest_source) == 0,
-                             length(input$infest_ctys) == 0)) {
+                             length(input$infest_ctys) == 0,
+                             length(input$wb_types) == 0)) {
                         output$overfiltering_warning = renderUI({
                           "One of your filter inputs is empty! The map and change in new infestations over time graph reflect your previous selections. "
                         })
@@ -358,7 +363,8 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
                       
     req(all(length(input$infest_spp) > 0,
             length(input$infest_source) > 0,
-            length(input$infest_ctys) > 0))
+            length(input$infest_ctys) > 0,
+            length(input$wb_types) > 0))
     
     #FILTER ACCORDING TO ALL USER INPUTS
     tmp = IWL_allSources  %>%
@@ -367,8 +373,10 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
              if(input$exclude_conns == TRUE) { connected == FALSE } else { TRUE } ,
              COUNTY %in% input$infest_ctys,
              source %in% input$infest_source,
+             wb_class %in% input$wb_types,
              if(input$exclude_noaccess == TRUE) { DOW %in% pub_accesses } else { TRUE },
-             if(input$exclude_rares == TRUE) { species %in% setdiff(unique(species), rares) } else { TRUE } #IF WE'RE EXCLUDING RARES, SPECIES HAS TO BE W/IN SET THAT DOESN'T INCLUDE ANY OF THE RARE ONES.
+             if(input$exclude_rares == TRUE) { species %in% setdiff(unique(species), rares) } else { TRUE }, #IF WE'RE EXCLUDING RARES, SPECIES HAS TO BE W/IN SET THAT DOESN'T INCLUDE ANY OF THE RARE ONES.
+             if(input$exclude_small_wbs == TRUE) { LAKE_SIZE >= 10 } else { TRUE }
              ) %>% 
       filter(year == min(year), .by = c(DOW, species)) %>% #MUCH AS IN GLOBAL.R, THIS COMMAND WILL RESOLVE THE COLLISIONS SUCH THAT, OF THE SOURCES SELECTED, ONLY THE VERY FIRST RECORD CHRONOLOGICALLY WILL WIN. WE MUST DO THIS *AFTER* FILTERING BY SOURCE BUT *BEFORE* FILTERING BY YEAR (BELOW)
       distinct(year, DOW, species, .keep_all = TRUE)
@@ -411,6 +419,8 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
          input$infest_spp, #IF YOU SELECT A SPECIES WITH NO RECORDS IN THE SELECTED AREA, THIS DOESN'T CHANGE THE ABOVE FILE BUT OUGHT TO CHANGE THE SATURATION DENOMINATOR.
          input$infest_years, #THIS ONE IS NEEDED TO CHANGE THE X-AXIS SCALE ON THE GRAPH.
          input$infest_ctys, #ALSO CHANGES THE DENOMINATOR (IF A COUNTY HAS NO RECORDS IN THE SELECTED TIME FRAME),
+         input$wb_types, #THIS WOULD ALSO CHANGE THE DENOMINATOR I THINK?
+         input$exclude_small_wbs, #I THINK THIS ONE WOULD ALSO REDUCE THE DENOMINATOR.
          input$exclude_noaccess, #ALSO CAN CHANGE THE DENOMINATOR BY CREATING A LOT MORE COUNTIES THAT MIGHT BE 0S. 
          habitability_debounced(),
          known_debounced(),
@@ -436,7 +446,9 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
       
     #CALC TOTAL NUMBER OF WATERBODIES IN REGION UNDER CONSIDERATION
     filtered_wbs = lakesDBsimple %>% 
-      filter(COUNTY %in% input$infest_ctys)
+      filter(COUNTY %in% input$infest_ctys,
+             wb_class %in% input$wb_types,
+             if(input$exclude_small_wbs) { LAKE_SIZE >= 10 } else { TRUE })
     
     #REDUCE, IF NEEDED, TO ONLY THOSE W/ PUBLIC ACCESSES.
     if(input$exclude_noaccess) {
@@ -666,15 +678,15 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     output$saturation_caption = renderUI({
       if(!input$saturation_byarea) {
       tags$figcaption(
-        HTML("Text displaying the approx. % of MN lakes invaded. Calculation:<br>
-        (Known infestations (per lake + species) * (1/prop. true known infestations)) / <br>
-        ((Lakes * species) * prop. lakes habitable)")
+        HTML("Text displaying the approx. % of MN waterbodies invaded. Calculation:<br>
+        (Known infestations (per waterbody + species) * (1/prop. true known infestations)) / <br>
+        ((Waterbodies * species) * prop. waterbodies habitable)")
       )
       } else {
         tags$figcaption(
-        HTML("Text displaying the approx. % of MN lake area invaded. Calculation:<br>
-        (Known infested area (area/lake * # species/lake) * (1/prop. true known infestations)) / <br>
-        ((Total lake area * species) * prop. lake area habitable)")
+        HTML("Text displaying the approx. % of MN waterbody area invaded. Calculation:<br>
+        (Known infested area (area/waterbody * # species/waterbody) * (1/prop. true known infestations)) / <br>
+        ((Total waterbody area * species) * prop. waterbody area habitable)")
         )
       }
     })
@@ -683,11 +695,11 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     output$saturation_figcaption = renderUI({
       if(!input$saturation_byarea) {
         tags$figcaption(
-          "Line graph showing the change in total invasion saturation, in proportion of invasions per taxon per lake, over time for the lakes and taxa selected, based on your assumptions."
+          "Line graph showing the change in total invasion saturation, in proportion of invasions per taxon per waterbody, over time for the waterbodies and taxa selected, based on your assumptions."
         )
       } else {
         tags$figcaption(
-          "Line graph showing the change in total invasion saturation, in proportion of invaded area per taxon per lake, over time for the lakes and taxa selected, based on your assumptions."
+          "Line graph showing the change in total invasion saturation, in proportion of invaded area per taxon per waterbody, over time for the waterbodies and taxa selected, based on your assumptions."
         )
       }
     })
@@ -704,17 +716,17 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
       
     } else {
       
-      if(estimated_saturation < 5) { message = "If your assumptions are true, AIS spread prevention would be immensely valuable, as nearly all lakes are almost wholly uninvaded by the taxa under consideration."}
+      if(estimated_saturation < 5) { message = "If your assumptions are true, AIS spread prevention would be immensely valuable, as nearly all waterbodies are almost wholly uninvaded by the taxa under consideration."}
       
-      if(estimated_saturation >= 5 & estimated_saturation < 10) { message = "If your assumptions are true, AIS spread prevention would be very valuable, as many lakes are entirely or mostly uninvaded by the taxa under consideration."}
+      if(estimated_saturation >= 5 & estimated_saturation < 10) { message = "If your assumptions are true, AIS spread prevention would be very valuable, as most waterbodies are entirely or mostly uninvaded by the taxa under consideration."}
       
       if(estimated_saturation >= 10 & estimated_saturation < 25) { message = "If your assumptions are true, AIS spread prevention would be valuable, as many new invasions are still possible."}
       
-      if(estimated_saturation >= 25 & estimated_saturation < 50) { message = "If your assumptions are true, AIS spread prevention may still be valuable, as many lakes are still susceptible to some new invasions."}
+      if(estimated_saturation >= 25 & estimated_saturation < 50) { message = "If your assumptions are true, AIS spread prevention may still be valuable, as many waterbodies are still susceptible to many new invasions."}
       
-      if(estimated_saturation >= 50 & estimated_saturation < 80) { message = "If your assumptions are true, AIS spread prevention may still be somewhat valuable, as some lakes are still susceptible to a few new invasions."}
+      if(estimated_saturation >= 50 & estimated_saturation < 80) { message = "If your assumptions are true, AIS spread prevention may still be somewhat valuable, as some waterbodies are still susceptible to a few new invasions."}
       
-      if(estimated_saturation >= 80) { message = "If your assumptions are true, AIS spread prevention may have relatively little value; most lakes are already largely or fully invaded by the taxa under consideration."}
+      if(estimated_saturation >= 80) { message = "If your assumptions are true, AIS spread prevention may have relatively little value; most waterbodies are already largely or fully invaded by the taxa under consideration."}
       
       output$saturation_context = renderText({
        message

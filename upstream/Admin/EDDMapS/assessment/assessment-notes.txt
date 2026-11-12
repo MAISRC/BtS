@@ -1,0 +1,46 @@
+EDDMapS Minnesota record assessment - November 12, 2026
+
+Scope: revised 128-taxon source list; 123 taxa mapped to 165 query identifiers.
+Species groups retain the source list's combined cattail and watermilfoil scope.
+Five unmapped taxa could not be queried by species; no related taxa were substituted.
+
+202 occurrence-page requests returned 47,564 distinct record IDs (no duplicate IDs).
+41 foreign records were excluded: 40 Tabasco, Mexico, and 1 Canada. Numeric state
+ID 27 and FIPS prefixes are reused internationally. Confirmed Minnesota labels
+were required; a blank-label record was checked through its individual country/state.
+
+47,523 Minnesota records cover 54 source taxon groups.
+46,380 have valid numeric point coordinates and an observation year.
+43,061 of those are positive or treated records across 53 source taxon groups:
+41,397 positive; 1,664 treated. The other geolocated/year records comprise
+2,356 negative and 963 eradicated records.
+1,143 Minnesota records lack a required coordinate/year field: 1,071 lack
+coordinates, 749 lack a usable year, with 677 missing both (categories overlap).
+No records without point coordinates supplied alternative nonpoint geometry.
+
+Collapsing exact source-taxon/latitude/longitude/year repetitions leaves
+42,616 positive-or-treated rows. This is not a count of infested lakes.
+No snapping, lake matching, NAS-overlap assessment, or reconciliation of later
+eradication reports against earlier positive records has been performed.
+Treated records remain presence candidates; treatment alone is not eradication.
+Some coordinates are explicitly centroids, so field completeness is not a
+guarantee of precision adequate for lake assignment.
+
+The API caps larger requests at 2,000 despite documentation stating 3,000.
+The complete count uses verified 1,000-record pages. For the four largest
+queries an additional page beyond the final short page was checked and empty.
+Completed responses total about 107 MB of JSON before discarding extra fields.
+
+Files: taxon-summary.csv; counts.csv; status-summary.csv; page-log.csv;
+pagination-checks.csv; excluded-geography.csv; record-audit.rds.
+occurrences-positive-or-treated.csv contains latitude, longitude, species, state,
+year. Its species names exactly match the canonical invasive-species CSV at
+inputs/Static/invasives_list_revised_2026.csv, including the combined hybrid groups.
+occurrences-all-statuses.csv retains the original species_code field instead.
+observed-taxon-crosswalk.csv maps returned EDDMapS codes, including subspecies,
+to the source scientific names. Counts are in taxon-summary.csv; descendant
+ancestry is recorded in descendant-details.rds.
+
+Reproduce: Rscript upstream/Admin/EDDMapS/scripts/assessEDDMapSRecords.R
+Resume interrupted unchanged inputs: append --resume. Default starts a fresh snapshot.
+
