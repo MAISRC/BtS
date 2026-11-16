@@ -75,7 +75,7 @@ make_infest_graph = function(currDF, pal2use) { #CURRDF HERE IS ALREADY SUMMARIZ
 MN = readRDS("inputs/Static/MN") 
 
 #DEFINITIVE LIST OF INVASIVES
-allInvasivesList = read.csv("inputs/Static/invasives_list_revised_2026.csv")
+allInvasivesList = read.csv("inputs/Static/invasives_list_revised_2026_v2.csv")
 
 ### LAKES DATABASE -------------------------------------------
 
@@ -164,6 +164,9 @@ IWL = infestedWaters %>%
   dplyr::filter(nRecs == 1 | (nRecs == 2 & connected == FALSE)) %>% 
   dplyr::select(-nRecs)
 
+#MATCH THE DNR'S VHS ABBREVIATION TO THE COMMON NAME USED BY THE SPECIES LIST AND NAS.
+IWL$species[IWL$species == "VHS"] = "viral hemorrhagic septicemia virus"
+
 #JOIN CENTROID AND LAKE INFO TO IWL
 IWL_sf = left_join(IWL, lakesDBsimple, relationship = "many-to-one", by = "DOW") %>% 
   st_as_sf() #MAINTAIN THE SF STATUS
@@ -220,12 +223,14 @@ NAS_sf = readr::read_csv("https://raw.githubusercontent.com/MAISRC/BtS/main/inpu
                         status = readr::col_character(),
                        )
                       ) %>% 
-  dplyr::filter(!status %in% c("failed", "extirpated", "eradicated", "stocked"),#***SOMETHING OF A JUDGMENT CALL HERE.
+  dplyr::filter(
+    #I THINK FILTERING BY STATUS BEFORE WE HAVE A DOW COULD BE PREMATURE.
+    #!status %in% c("failed", "extirpated", "eradicated", "stocked"),#***SOMETHING OF A JUDGMENT CALL HERE.
                 !is.na(latitude), !is.na(longitude), #ONLY ONE OF THESE AT TIME OF WRITING. 
                 longitude >= -97.22904, longitude <= -89.48923, #ALSO SOME INVALID LAT/LONGS
                 latitude >= 43.49952, latitude <= 49.38436,
                 !species %in% c("Dreissena sp.", "Helisoma sp.")) %>% 
-  dplyr::select(-status) %>%  #DITCH IT NOW.
+#  dplyr::select(-status) %>%  #DITCH IT NOW.
   sf::st_as_sf(crs = 4326, coords = c("longitude", "latitude"))
 
 #ADJUST SOME SPECIES NAMES FOR PROPER JOINING
@@ -236,6 +241,19 @@ NAS_sf$species[NAS_sf$species == "Eichhornia crassipes"] = "Pontederia crassipes
 NAS_sf$species[NAS_sf$species == "Myriophyllum × hybridum"] = "Myriophyllum spicatum"
 NAS_sf$species[NAS_sf$species == "Ctenopharyngodon idella var. diploid"] = "Ctenopharyngodon idella"
 NAS_sf$species[NAS_sf$species == "Typha × glauca"] = "Typha angustifolia" #***SIMPLIFYING
+
+#HISTORICAL SCIENTIFIC NAMES FOR THE NEW PATHOGENS. NONE APPEAR IN THE CURRENT NAS FILE.
+NAS_sf$species[NAS_sf$species == "Myxosoma cerebralis"] = "Myxobolus cerebralis"
+NAS_sf$species[NAS_sf$species == "Heterosporis sutherlanda"] = "Heterosporis sutherlandae" #SPELLING USED ON THE MAISRC PAGE
+NAS_sf$species[NAS_sf$species %in% c("Piscine novirhabdovirus", "Oncorhynchus 2 novirhabdovirus",
+                                  "Viral hemorrhagic septicemia virus")] = "Novirhabdovirus piscine"
+NAS_sf$species[NAS_sf$species %in% c("Santee-Cooper ranavirus", "Largemouth bass virus")] = "Ranavirus micropterus1"
+NAS_sf$species[NAS_sf$species %in% c("Carp sprivivirus", "Rhabdovirus carpio",
+                                  "Spring viremia of carp virus", "Spring viraemia of carp virus")] = "Sprivivirus cyprinus"
+
+#OLDER NAMES USED IN THE MISAC RATINGS AND SPECIES RECORDS.
+NAS_sf$species[NAS_sf$species == "Cylindrospermopsis raciborskii"] = "Raphidiopsis raciborskii"
+NAS_sf$species[NAS_sf$species %in% c("Cyprinid herpesvirus 3", "Koi herpesvirus")] = "Cyvirus cyprinidallo3"
 
 #FIND THE SPECIES THAT OVERLAP W/ OUR INVASIVE SPECIES LIST AND FILTER TO ONLY THOSE
 overlaps = intersect(x = NAS_sf$species, allInvasivesList$scientific)
@@ -264,13 +282,55 @@ NAS_joined = st_join(x = NAS_matches, y = lakesDB,
   st_drop_geometry() %>% #DITCH THE OBSERVATION GEOMETRY.
   st_as_sf(crs = 26915, coords = c("center_utm", "center_u_1")) %>% #CHANGE OVER TO THE LAKE CENTROID GEOMETRY.
   st_transform(crs = 4326) %>% 
-  filter(year == min(year), .by = c(DOW, species)) %>%  #THESE TWO COMMANDS COLLAPSE DOWN TO JUST THE FIRST OBSERVATIONS PER SPECIES PER WATERBODY.
-  distinct(DOW, species, .keep_all = TRUE)
+  arrange(DOW, species, year) #SORT SO THAT, BY WB AND SPECIES, ALL OCCURANCES OCCUR IN TEMPORAL ORDER.
 
+
+#NEXT, WE FILTER BY STATUSES, NOW THAT WE HAVE DOWS. 
+
+#MAKE MORE CONSISTENT FOR MATCHING
+NAS_joined$status[is.na(NAS_joined$status)] = "unknown"
+NAS_joined$status[NAS_joined$status == "locally established"] = "established"
+
+#TO FILTER THIS DATA SET, WE NEED TO ESTABLISH SOME RULES FOR HOW TO FILTER/SELECT RECORDS BY STATUS:
+#1. REMOVE "STOCKED" AS A STATUS--STOCKED POPULATIONS WOULD BE COLLECTIBLE W/O ANY EVIDENCE THEY ARE ESTABLISHED.
+#2. IF STATUS == "FAILED", "ERADICATED", OR "EXTIRPATED" WITHOUT A SUBSEQUENT "COLLECTED" OR "ESTABLISHED", REMOVE THAT WATERBODY AS NO LONGER INFESTED PENDING A NEW POSITIVE CONFIRMATION.
+#3. IF ONLY STATUS IS "UNKNOWN", RETAIN BUT TREAT AS "INCONCLUSIVE" VIA THE UNKNOWN TOGGLE.
+#4. "COLLECTED" AND "ESTABLISHED" ARE FUNCTIONALLY SYNONYMOUS. WHICHEVER IS EARLIER TAKES THE CONFIRMATION DATE. 
+#5. INTERVENING "UNKNOWNS" IN BETWEEN "COLLECTED"S OR "ESTABLISHED"S ARE IGNORED, AS ARE SUBSEQUENT UNKNOWNS ON AN ALREADY POSITIVE WATERBODY. 
+
+NAS_joined = NAS_joined %>% 
+  filter(status != "stocked") %>% #RULE 1
+  mutate(new_status = case_when( #SIMPLIFY TO JUST THREE REMAINING STATUS TYPES.
+    status %in% c("collected", "established") ~ "positive", #RULE 4
+    status %in% c("failed", "extirpated", "eradicated") ~ "negative",
+    status == "unknown" ~ "unknown" 
+  )) %>% 
+  mutate(sum_status = case_when( #RESOLVE WITHIN-YEAR STATUS CONFLICTS--CASE_WHEN RESOLVES SEQUENTIALLY LIKE AN IF ELSE SO FIRST HIT TAKES IT. 
+    all(new_status != "negative") & any(new_status == "positive") ~ "positive", 
+    all(new_status == "unknown") ~ "unknown",
+    TRUE ~ "negative" #HENCE WHY THIS CAN BE JUST TRUE. 
+  ),
+         .by = c(DOW, species, year)) %>% 
+  mutate(last_positive = max(year[sum_status == "positive"], -Inf), #THEN, DETERMINE WHEN TRAJECTORIES CONTAIN POSITIVE OR NEGATIVE EVENTS
+         last_negative = max(year[sum_status == "negative"], -Inf), 
+         .by = c(DOW, species)) %>% 
+  mutate(traj = case_when(
+    last_positive > last_negative ~ "positive", #IF ANY POSITIVE OCCURS AFTER THE LAST NEGATIVE (OR IF THERE ISN'T ONE), WE HIT HERE FIRST.
+    is.finite(last_negative) ~ "negative", #OTHERWISE, if NO POSITIVES AND THERE IS A NEGATIVE, OR THERE'S A NEGATIVE AFTER THE LAST POSITIVE, THEN WE HIT HERE.
+    TRUE ~ "unknown" #OTHERWISE, IT'S ALL UNKNOWNS AND WE HIT HERE. #RULE 3
+  )) %>% 
+  filter(traj != "negative") %>% #RULE 2
+  filter(traj == "unknown" | sum_status == "positive") %>% #FIRST UNKNOWN YEAR BUT ONLY FOR TRAJ == UNKNOWN OR ELSE FIRST POSITIVE YEAR.
+  filter(year == min(year), 
+         .by = c(DOW, species)) %>%  #RULES 4 AND 5
+  distinct(DOW, species, .keep_all = TRUE) %>%  #RESOLVES MULTIPLE OBSERVATIONS IN THE SAME YEAR.
+  select(-c(status, new_status, sum_status, last_positive, last_negative))
+  
 NAS_joined$source = "Nonindigenous Aquatic Species (NAS) Database"
 NAS_joined$connected = FALSE
 
 IWL_allSources = bind_rows(IWL_allSources, NAS_joined)
+IWL_allSources$traj[is.na(IWL_allSources$traj)] = "positive" #JUST TO FILL THIS REMAINING COLUMN FOR THE OTHER TWO SOURCES.
 
 # PRE-BAKE GLOBAL OBJECTS -----------------------------
 
@@ -306,6 +366,7 @@ names(taxa2pick) = stringr::str_to_sentence(taxa2pick) #NICER NAMES
 #EFFECTS OPINIONATED STARTING CONDITIONS SET BY ME
 excludeRaresStart = TRUE
 excludeSmallStart = TRUE
+excludeLastUnknowns = TRUE
 startingYear = 1987
 startingKnown = 50
 startingHabitability = 50
@@ -315,6 +376,7 @@ startingWBTypes = c("Lake or Pond", "Reservoir", "Riverine polygon", "Wetland")
 startingDF = IWL_allSources %>% 
   dplyr::filter(
     if(excludeRaresStart) { species %in% setdiff(unique(species), rares) } else { TRUE },
+    if(excludeLastUnknowns) { traj != "unknown" } else { TRUE },
     if(excludeSmallStart) { LAKE_SIZE >= 10 } else { TRUE },
     wb_class %in% startingWBTypes
 )

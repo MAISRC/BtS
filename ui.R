@@ -136,10 +136,10 @@ tags$header(
     h1(tagList(
       img(src = "maisrc-black.png",
           alt = "MAISRC logo.",#THIS ALT SHOULD JUST BE THE TEXT SIGHTED PERSONS WOULD SEE HERE.
-          style = "min-width: 320px;"),
+          style = "min-width: 320px; max-height: 75px;"),
       img(src = "beating-the-spread.png",
           alt = "Beating the Spread",#THIS ALT SHOULD JUST BE THE TEXT SIGHTED PERSONS WOULD SEE HERE.
-          style = "min-width: 320px;")
+          style = "min-width: 320px; max-height: 200px;")
     ),
 ), 
     #IF THERE'S A NAV BAR IN THE HEADER, IT SHOULD BEAR THIS SEMANTIC TAG.
@@ -269,16 +269,20 @@ tags$fieldset(
                 label = "Exclude records listed due to water connections, not independent confirmations (state statute says waterbodies connected to infested waterbodies are treated as infested whether these are confirmed or not (and confirmations rarely occur). Only relevant for the Infested Waters List.)", 
                 value = FALSE),
   
+  checkboxInput("exclude_last_unknowns", 
+                label = "Exclude records whose only observations were status \"unknown,\" indicating uncertain establishment. Only relevant for the Nonindigenous Aquatic Species database.", 
+                value = TRUE),
+  
   checkboxInput("exclude_small_wbs", 
-                label = "Restrict to records from waterbodies >= 10 acres in size.", 
+                label = "Restrict to records from waterbodies >= 10 acres in size (according to the MN DNR's hydrography database).", 
                 value = excludeSmallStart),
   
   checkboxInput("exclude_noaccess", 
-                label = "Exclude records from waterbodies without public motorized boat launches", 
+                label = "Exclude records from waterbodies without public motorized boat launches (according to the MN DNR's database of these).", 
                 value = FALSE),
   
   checkboxInput("exclude_rares",
-                label = "Exclude taxa with few (< 10) known infestations",
+                label = "Exclude taxa with few (< 10) known statewide infestations to date (ignoring your time-range filters)",
                 value = excludeRaresStart)
 
      ) #END SECOND COL
@@ -319,14 +323,14 @@ tags$section(
   
   #### SATURATION EXPLANATION ---------------------------------------------------------
   tags$section(
-    p("AIS spread prevention can only be effective if there are still invadable waterbodies that haven't yet been invaded and we can thus prevent them from becoming invaded. So, we might wonder: \"How close to fully invaded\" are Minnesota's inland waterbodies? Here, we define \"fully invaded\" as every (invadable) waterbody having every possible invader."),
-    p("As such, the answer to this important question depends on three main factors: "),
+    p("Prevention can only work when there's something left to prevent! What fraction of Minnesota's waterbodies  haven't", em("yet"), "been invaded but remain invadable? Or, said differently, \"How close to fully invaded\" are we?"),
+    p("The answer hinges on three factors: "),
     tags$ul(
-      tags$li("Which waterbodies, regions, and taxa are we considering?"),
-      tags$li("What fraction of waterbodies is actually \"invadable?\", and"),
-      tags$li("What fraction of all \"true\" invasions is known?")
+      tags$li("Which waterbodies, regions, and taxa are we considering? (Here, we'll respect your selections in the earlier section)"),
+      tags$li("What fraction of waterbodies is actually \"invadable?\" (you'll set that assumption in this section), and"),
+      tags$li("Do we know about all invasions, or is there some fraction we don't yet know about? (you'll set this assumption in this section too)")
     ),
-    p("We know not all waterbodies are even inhabitable (or colonizable) by all taxa and that the percentage that is inhabitable probably depends on the taxon. Research (Kanankege",
+    p("We know the percentage of waterbodies that are inhabitable is less than 100% and varies by species. Research (Kanankege",
       em("et al."), "2019 (",
       a("see here",
         href = "https://www.researchgate.net/publication/344694872_The_use_of_spatiotemporal_analytical_tools_to_inform_decisions_and_policy_in_One_Health_scenarios",
@@ -341,10 +345,10 @@ tags$section(
         target = "_blank",
         rel = "noopener"
       ),
-      ")) suggests that the percentage of lakes, specifically, suitable for zebra mussel, starry stonewort, and Eurasian watermilfoil is likely between 30-70%, for example."
+      ")) suggests the percentages of lakes inhabitable by zebra mussel, starry stonewort, and Eurasian watermilfoil lie between 30-70%, for example."
     ),
     p(
-      "We also know that AIS surveillance and monitoring only catches so many infestations, especially when they are new and small. Because we can only count infestations we know about, the number of existing-but-unknown infestations is important to estimate. One estimate from neighboring Wisconsin from over a decade ago (Latzka",
+      "We also know AIS surveillance catches less than 100% of all extant infestations, especially new ones. Because we can only count infestations we know about, estimating the number of infestations we", em("don't"), " know about is important. One older estimate from Wisconsin (Latzka",
       em("et al."),
       "2013 (",
       a("see here",
@@ -352,9 +356,8 @@ tags$section(
         target = "_blank",
         rel = "noopener"
       ),
-      ")) suggested we may only know about as few as 25% of all existing infestations, though we'd like to think we know about a far greater percentage than that."
-    ),
-    p("Lastly, the answer also depends on how what pool of waterbodies and taxa one considers. Do we include only waterbodies large enough to have motorized boat traffic (research suggests boats are the dominant cause of new infestations), such as those greater than approximately 10 acres? That have public, motorized boat launches? Do we include only relatively common or high-priority taxa?")
+      ")) put the percentage of infestations we don't know about as high as 75%! That'd mean there are 4x as many infestations as have been documented so far; we'd like to think that's not true in Minnesota, but we don't know for sure."
+    )
   ),
   fluidRow(
     column(width = 4, offset = 1,
@@ -422,7 +425,7 @@ tags$section(
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
 HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center, University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>, under the current direction of <address><a href='mailto:XXX@umn.edu'>XXX (XXX@umn.edu)</a></address>.<br>
-App last updated Nov. 12 2026. Version 0.0.6. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
+App last updated Nov. 16 2026. Version 0.0.8. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"

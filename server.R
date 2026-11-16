@@ -344,6 +344,7 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     list(input$infest_years, 
                     input$infest_spp, 
                     input$exclude_conns, 
+                    input$exclude_last_unknowns,
                     input$infest_ctys, 
                     input$infest_source, 
                     input$wb_types,
@@ -370,7 +371,8 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     tmp = IWL_allSources  %>%
       filter(
              species %in% input$infest_spp,
-             if(input$exclude_conns == TRUE) { connected == FALSE } else { TRUE } ,
+             if(input$exclude_conns == TRUE) { connected == FALSE } else { TRUE },
+             if(input$exclude_last_unknowns == TRUE) { traj != "unknown" } else { TRUE },
              COUNTY %in% input$infest_ctys,
              source %in% input$infest_source,
              wb_class %in% input$wb_types,
@@ -422,6 +424,7 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
          input$wb_types, #THIS WOULD ALSO CHANGE THE DENOMINATOR I THINK?
          input$exclude_small_wbs, #I THINK THIS ONE WOULD ALSO REDUCE THE DENOMINATOR.
          input$exclude_noaccess, #ALSO CAN CHANGE THE DENOMINATOR BY CREATING A LOT MORE COUNTIES THAT MIGHT BE 0S. 
+         input$exclude_last_unknowns, #A LOT OF RECORDS HAVE THIS STATUS, SO WOULD DEF. ALTER THE NUMERATOR I THINK? 
          habitability_debounced(),
          known_debounced(),
          input$saturation_byarea
@@ -750,7 +753,7 @@ observeEvent(input$exclude_rares, {
   
 })
   
-## RESTRICT NUMERIC INPUTS OBSERVERs -----------------------------------------------------
+  ## RESTRICT NUMERIC INPUTS OBSERVERs -----------------------------------------------------
   
   #OTHERWISE, YOU CAN OVERRIDE THE MIN/MAX WITH A KEYBOARD
   observeEvent(input$known_selector, priority = 2, {
@@ -780,6 +783,34 @@ observeEvent(input$exclude_rares, {
     }
     
   })
+  
+## HIDE EXCLUDES ON SOURCE DESELECT -----------------------------------------------------
+  
+  #UX AFFORDANCE--HIDE AN IRRELEVANT SELECTOR IF IWL SOURCE DECHECKED. 
+  observeEvent(input$infest_source, {
+    
+    if("MN DNR's Infested Waters List" %in% input$infest_source) {
+      
+      shinyjs::show("exclude_conns")
+      
+    }  else {
+      
+      shinyjs::hide("exclude_conns")
+      
+    }
+    
+    if("Nonindigenous Aquatic Species (NAS) Database" %in% input$infest_source) {
+      
+      shinyjs::show("exclude_last_unknowns")
+      
+    }  else {
+      
+      shinyjs::hide("exclude_last_unknowns")
+      
+    }
+    
+  })
+
   
 # DOWNLOAD HANDLERS----------------------------------------------------
   
