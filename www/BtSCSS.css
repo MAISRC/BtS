@@ -370,7 +370,7 @@ a.leaflet-control-zoom-out, a.leaflet-control-zoom-in {
   width: 80%;
 }
 
-span.irs-grid-text, span.irs-min, span.irs-max {
+span.irs-grid-text, span.irs-min, span.irs-max, span.irs-from, span.irs-to {
   font-size: 75% !important;
 }
 
@@ -387,6 +387,7 @@ span.irs-bar {
 
 /* THE COMBO HERE IS IMPORTANT. SET A MAX-WIDTH AND THEN FORCE IT TO BE AT LEAST AS WIDE AS NEEDED TO FIT THE CONTENT. WHITESPACE PREVENTS NO WRAP, WHILE OVERFLOW-WRAP FORCES THE WRAP WHEN MAX-WIDTH IS HIT. */
 .leaflet-tooltip {
+  font-size: 100% !important;
   max-width: 250px !important;
   width: max-content;
   white-space: normal;

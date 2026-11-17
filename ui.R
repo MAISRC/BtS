@@ -161,19 +161,19 @@ tags$main(
 
 tags$section(
   id = "infest_map_div",
-  h2("Which waterbodies are invaded with which taxa?"),
+  h2("Which invaders have been documented at which waterbodies?"),
   
   #### INFESTATION MAP ---------------------------------------------------------
   tags$figure(
-    tags$figcaption("Map showing waterbodies (points) with confirmed infestations given your current input selections (see next section). Hover points for more information."),
+    tags$figcaption("Map showing waterbodies (points) with credible, documented observations of invaders, given your current filters (see next section). Hover points for more information."),
     downloadButton("download_map_records", 
-                   label = HTML("Download the map data in CSV format."), 
+                   label = HTML("Download the data as CSV."), 
                    icon = NULL, 
                    class = "link-style-btn", 
                    style = "padding: 0; border: none; background: none; cursor: pointer; text-align: left; margin-bottom: 10px; display: inline; margin-left: auto; margin-right: auto; text-wrap: wrap;"),
     br(),
     downloadButton("map_HTML_download", 
-                   label = HTML("Download the current map data as an HTML file."), 
+                   label = HTML("Download the map as HTML."), 
                    icon = NULL, 
                    class = "link-style-btn", 
                    style = "padding: 0; border: none; background: none; cursor: pointer; text-align: left; margin-bottom: 10px; display: inline; margin-left: auto; margin-right: auto; text-wrap: wrap;"),
@@ -188,12 +188,12 @@ br(),
 
 tags$section(
   id = "scope_filtering_div",
-  h2("Which waterbodies and taxa are we concerned with?"),
+  h2("Which waterbodies and taxa are we considering?"),
   
   uiOutput("overfiltering_warning"), 
   
 tags$fieldset(
-  tags$legend("Control which infestations are considered throughout the dashboard."),
+  tags$legend("Control which infestations, waterbodies, and invaders are considered throughout the dashboard."),
   
   fluidRow(
     style = "width: 100%;",
@@ -240,7 +240,7 @@ tags$fieldset(
            suppressNativeSelectAccessibility("infest_source"),
            
            pickerInput("wb_types", 
-                       label = "Waterbody types (as designated by the state)",
+                       label = "Waterbody types (as designated by the MN DNR)",
                        choices = sort(unique(IWL_allSources$wb_class)), 
                        selected = startingWBTypes, 
                        multiple = TRUE, 
@@ -257,7 +257,7 @@ tags$fieldset(
     column(width = 4, offset = 2, 
   
   sliderInput("infest_years", 
-              label = "Year confirmed", 
+              label = "Earliest year documented", 
               min = min(IWL_allSources$year, na.rm=T), 
               max = max(IWL_allSources$year, na.rm=T), 
               step = 1, 
@@ -266,23 +266,23 @@ tags$fieldset(
   ),
   
   checkboxInput("exclude_conns", 
-                label = "Exclude records listed due to water connections, not independent confirmations (state statute says waterbodies connected to infested waterbodies are treated as infested whether these are confirmed or not (and confirmations rarely occur). Only relevant for the Infested Waters List.)", 
+                label = "Exclude records listed due to connections with other waterbodies only (statute states waterbodies connected to infested waterbodies are infested, whether or not confirmed (confirmations rarely occur). Only affects the Infested Waters List.)", 
                 value = FALSE),
   
   checkboxInput("exclude_last_unknowns", 
-                label = "Exclude records whose only observations were status \"unknown,\" indicating uncertain establishment. Only relevant for the Nonindigenous Aquatic Species database.", 
+                label = "Exclude records whose only observations had status \"unknown\". Only relevant for the Nonindigenous Aquatic Species database.", 
                 value = TRUE),
   
   checkboxInput("exclude_small_wbs", 
-                label = "Restrict to records from waterbodies >= 10 acres in size (according to the MN DNR's hydrography database).", 
+                label = "Restrict to waterbodies >= 10 acres (according to the MN DNR's hydrography database).", 
                 value = excludeSmallStart),
   
   checkboxInput("exclude_noaccess", 
-                label = "Exclude records from waterbodies without public motorized boat launches (according to the MN DNR's database of these).", 
+                label = "Exclude waterbodies without public motorized boat launches (according to the MN DNR's database).", 
                 value = FALSE),
   
   checkboxInput("exclude_rares",
-                label = "Exclude taxa with few (< 10) known statewide infestations to date (ignoring your time-range filters)",
+                label = "Exclude taxa with few (< 10 different waterbodies) documented observations to date",
                 value = excludeRaresStart)
 
      ) #END SECOND COL
@@ -298,13 +298,13 @@ br(),
 
 tags$section(
   id = "infest_graph_div",
-  h2("How have the rates of new infestations changed over time?"),
+  h2("How have rates of new infestations changed over time?"),
   
   #### CHANGE GRAPH ---------------------------------------------------------
   tags$figure(
-    tags$figcaption("Line graph showing the numbers of new confirmed infestations (#s of waterbodies with DOW numbers; y-axis) per year (x-axis) by invasive species (colors). Lines can be hovered for more information. Double-click a legend key to select just a single line; single-click to remove a line."),
+    tags$figcaption("Line graph showing numbers of new documented cases (y-axis) per year (x-axis) by invader (colors). Hover lines for more info. Double-click legend keys to select single species; single-click to remove species."),
     downloadButton("chgovertime_download", 
-                   label = HTML("Download the current graph as an HTML file."), 
+                   label = HTML("Download current graph as HTML."), 
                    icon = NULL, 
                    class = "link-style-btn", 
                    style = "padding: 0; border: none; background: none; cursor: pointer; text-align: left; margin-bottom: 10px; display: inline; margin-left: auto; margin-right: auto; text-wrap: wrap;"),
@@ -319,7 +319,7 @@ br(),
 
 tags$section(
   id = "saturation_div",
-  h2("How \"saturated\" with invaders are Minnesota's inland waterbodies?"),
+  h2("How \"invasion saturated\" are Minnesota's waterbodies?"),
   
   #### SATURATION EXPLANATION ---------------------------------------------------------
   tags$section(
@@ -364,7 +364,7 @@ tags$section(
            
   #### SATURATION ASSUMPTIONS ---------------------------------------------------------
   tags$fieldset(
-    tags$legend("Use these additional toggles to set your assumptions about how invadable MN waterbodies are and how many invasions we know about. Use the selectors earlier in the app to control which taxa, regions, and waterbodies are included."),
+    tags$legend("Use these toggles to set assumptions about how invadable MN waterbodies are, on average, and how many invasions have been documented. Use selectors elsewhere to control which taxa, regions, and waterbodies are included."),
     numericInput("habitability_selector",
                  label = "% of waterbodies habitable", 
                  value = startingHabitability, #SEE GLOBAL.R
@@ -373,14 +373,14 @@ tags$section(
                  step = 1
                  ),
     numericInput("known_selector",
-                 label = "% of true infestations known", 
+                 label = "% of true infestations documented", 
                  value = startingKnown, #SEE GLOBAL.R
                  min = 0, 
                  max = 100, 
                  step = 1
                  ),
     checkboxInput("saturation_byarea",
-                  label = "Calculate saturation by total waterbody area instead (X% of a waterbody's area, including non-littoral area, assumed infested, where X = your % of waterbodies habitable value. Lake Superior excluded.)", 
+                  label = "Calculate invasion saturation by total waterbody area instead", 
                   value = FALSE)
    )
   ), #END COL 1
@@ -399,7 +399,7 @@ tags$section(
    tags$figure(
      uiOutput("saturation_figcaption"),
      downloadButton("satovertime_download", 
-                    label = HTML("Download the current graph as an HTML file."), 
+                    label = HTML("Download current graph as HTML."), 
                     icon = NULL, 
                     class = "link-style-btn", 
                     style = "padding: 0; border: none; background: none; cursor: pointer; text-align: left; margin-bottom: 10px; display: inline; margin-left: auto; margin-right: auto; text-wrap: wrap;"),
@@ -415,7 +415,7 @@ br(),
 tags$section(
   id = "info_area_div",
   downloadLink("invasives_list",
-               label = "Download a CSV file of all taxa we're considering invasive")
+               label = "Download a CSV of all taxa we're considering invasive.")
 ),
 
 ), #END MAIN
@@ -424,8 +424,8 @@ tags$section(
 
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
-HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center, University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>, under the current direction of <address><a href='mailto:XXX@umn.edu'>XXX (XXX@umn.edu)</a></address>.<br>
-App last updated Nov. 16 2026. Version 0.0.8. View the <a href = 'XXX' target = '_blank'>accessibility statement</a> (opens in new tab).<br>
+HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center at the University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>.<br>
+App last updated Nov. 17 2026. Version 0.0.9.<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"

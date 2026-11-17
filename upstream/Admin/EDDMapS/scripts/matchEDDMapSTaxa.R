@@ -2,8 +2,9 @@
 # Requires jsonlite. API responses are cached so interrupted searches can resume.
 # Add --refresh to fetch fresh taxonomy responses. query_ready means an identifier
 # is selected, not that Minnesota occurrences or public coordinates exist.
+source("Rcode/Scripts/normalizeInvasiveCommonNames.R")
 api <- "https://api.bugwoodcloud.org/v2"
-input_path <- "inputs/Static/invasives_list_revised_2026.csv"
+input_path <- "inputs/Static/invasives_list_revised_2026_v2.csv"
 cache_path <- "upstream/Admin/EDDMapS/cache/EDDMapS-taxonomy-search.rds"
 output_path <- "upstream/Admin/EDDMapS/reference/EDDMapS-taxon-crosswalk.csv"
 candidates_path <- "upstream/Admin/EDDMapS/cache/EDDMapS-taxonomy-candidates.csv"
@@ -70,7 +71,9 @@ candidates <- do.call(rbind, candidate_rows)
 # Reviewed exceptions preserve the intended source scope. No fuzzy match is accepted.
 overrides_path <- "upstream/Admin/EDDMapS/reference/EDDMapS-taxon-overrides.csv"
 overrides <- read.csv(overrides_path, stringsAsFactors = FALSE, fileEncoding = "UTF-8-BOM", colClasses = "character")
-stopifnot(!anyDuplicated(overrides$scientific), all(overrides$scientific %in% taxa$scientific))
+stopifnot(!anyDuplicated(overrides$scientific))
+# Preserve historical overrides, applying only those relevant to the current list.
+overrides <- overrides[overrides$scientific %in% taxa$scientific, , drop = FALSE]
 crosswalk$evidence_url <- ""
 for (i in seq_len(nrow(overrides))) {
   j <- match(overrides$scientific[i], crosswalk$scientific)
@@ -105,7 +108,9 @@ for (i in seq_len(nrow(crosswalk))) {
   crosswalk$eddmaps_name[i] <- paste(vapply(resolved, name_of, ""), collapse = "; ")
   crosswalk$source_url[i] <- paste(paste0(api, "/subject/", names(resolved)), collapse = "; ")
   for (entry in entries) query_rows[[length(query_rows) + 1L]] <- data.frame(
-    scientific = crosswalk$scientific[i], common = crosswalk$common[i],
+    scientific = crosswalk$scientific[i],
+    common = normalizeInvasiveCommonNames(crosswalk$common[i]),
+    canonical_common = crosswalk$common[i],
     eddmaps_subject_id = entry$id, eddmaps_name = entry$name,
     canonical_subject_id = entry$canonical, query_role = entry$role,
     match_status = crosswalk$match_status[i],
@@ -126,6 +131,8 @@ print(table(crosswalk$match_status))
 message("Mapped source taxa: ", sum(crosswalk$query_ready), " / ", nrow(crosswalk))
 message("Query identifiers: ", nrow(queries), "; unique: ", length(unique(queries$eddmaps_subject_id)))
 print(crosswalk[!crosswalk$query_ready, c("scientific", "common")], row.names = FALSE)
+
+
 
 
 

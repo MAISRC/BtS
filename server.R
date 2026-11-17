@@ -32,19 +32,15 @@ shinyServer(function(input, output, session) {
       st_drop_geometry() %>% 
       filter(year == min(year), .by = c(lat, lng, species)) %>% #TO ACCOUNT FOR THE POSSIBILITY THAT TWO DIFFERENT SOURCES HAVE THE SAME TAXON BUT FOR DIFF YEARS, COLLAPSE TO THE EARLIER ONE ACCORDING TO ALL SOURCES AVAILABLE. 
       filter(year >= startingYear) %>% #AS ELSEWHERE, WE FILTER BY YEAR ONLY AFTER HANDLING THE COLLISIONS.
-      summarize(all_species = paste(unique(stringr::str_to_sentence(species)), 
-                                    collapse = ", "),
-                all_confirmed_years = paste(year, collapse = ", "),
-                LAKE_NAME = first(LAKE_NAME),
-                DOW = first(DOW),
+      mutate(spp_year = paste0(stringr::str_to_sentence(species), " (", year, ") ")) %>% 
+      summarize(all_species_years = paste0(spp_year, collapse = ", "),
+                name_DOW = paste0(first(LAKE_NAME), " (", first(DOW), ")"),
                 .by = c(lat, lng)) %>% 
       distinct(lat, lng, .keep_all = TRUE)
-
+    
     IWF_summs$labels = lapply(seq_len(nrow(IWF_summs)), function(x) {
-      paste0("Waterbody: ", IWF_summs$LAKE_NAME[x], "<br>",
-             "DOW: ", IWF_summs$DOW[x], "<br>",
-             "Invader(s): ", IWF_summs$all_species[x], "<br>",
-             "Confirmed year(s): ", IWF_summs$all_confirmed_years[x])
+      paste0("<strong>Waterbody (DOW #):</strong> ", IWF_summs$name_DOW[x], "<br>",
+             "<strong>Invader(s) (confirmed years):</strong> ", IWF_summs$all_species_years[x])
     })
 
     bbox = unname(st_bbox(MN))
@@ -167,7 +163,7 @@ shinyServer(function(input, output, session) {
     
     cumInf_per_year$tooltip_text = paste0(
       "Year: ", cumInf_per_year$year, "<br>",
-      "% infestations of those possible: ", round(cumInf_per_year$prop_sat_adj*100, 2)
+      "% infestations of those thought possible: ", round(cumInf_per_year$prop_sat_adj*100, 2)
     )
     
     cumInf_per_year = cumInf_per_year %>% 
@@ -204,7 +200,7 @@ shinyServer(function(input, output, session) {
    
    output$saturation_caption = renderUI({
        tags$figcaption(
-         HTML("Text displaying the approx. % of MN waterbodies invaded. Calculation:<br>
+         HTML("Approx. % of MN waterbodies invaded. Calculation:<br>
         (Known infestations (per waterbody + species) * (1/prop. true known infestations)) / <br>
         ((Waterbodies * species) * prop. waterbodies habitable)")
        )
@@ -231,18 +227,15 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
   IWF_summs = map_sf %>% 
     st_drop_geometry() %>%  
     filter(year == min(year), .by = c(lat, lng, species)) %>% #TO ACCOUNT FOR THE POSSIBILITY THAT TWO DIFFERENT SOURCES HAVE THE SAME TAXON BUT FOR DIFF YEARS, COLLAPSE TO THE EARLIER ONE ACCORDING TO ALL SOURCES AVAILABLE. 
-    summarize(all_species = paste(stringr::str_to_sentence(species), collapse = ", "),
-              all_confirmed_years = paste(year, collapse = ", "),
-              LAKE_NAME = first(LAKE_NAME),
-              DOW = first(DOW),
+    mutate(spp_year = paste0(stringr::str_to_sentence(species), " (", year, ")")) %>% 
+    summarize(all_species_years = paste0(spp_year, collapse = ", "),
+              name_DOW = paste0(first(LAKE_NAME), " (", first(DOW), ")"),
               .by = c(lat, lng)) %>% 
-    distinct(lat, lng, .keep_all = T)
-  
+    distinct(lat, lng, .keep_all = TRUE)
+
   IWF_summs$labels = lapply(seq_len(nrow(IWF_summs)), function(x) {
-    paste0("Waterbody: ", IWF_summs$LAKE_NAME[x], "<br>",
-           "DOW: ", IWF_summs$DOW[x], "<br>",
-           "Invader(s): ", IWF_summs$all_species[x], "<br>",
-           "Confirmed year(s): ", IWF_summs$all_confirmed_years[x])
+    paste0("<strong>Waterbody (DOW #):</strong> ", IWF_summs$name_DOW[x], "<br>",
+           "<strong>Invader(s) (confirmed years):</strong> ", IWF_summs$all_species_years[x])
   })
   
   leafletProxy("infest_map", session = session) %>% 
@@ -499,7 +492,7 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     
     cumInf_per_year$tooltip_text = paste0(
           "Year: ", cumInf_per_year$year, "<br>",
-          "% infestations of those possible: ", round(cumInf_per_year$prop_sat_adj*100, 2)
+          "% infestations of those thought possible: ", round(cumInf_per_year$prop_sat_adj*100, 2)
         )
     
     #JUST DON'T PLOT THE DATA FROM OUTSIDE THE YEAR RANGE SELECTED, BUT HAVE IT REMAIN INTEGRATED INTO THE MATH
@@ -681,13 +674,13 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     output$saturation_caption = renderUI({
       if(!input$saturation_byarea) {
       tags$figcaption(
-        HTML("Text displaying the approx. % of MN waterbodies invaded. Calculation:<br>
+        HTML("Approx. % of MN waterbodies invaded. Calculation:<br>
         (Known infestations (per waterbody + species) * (1/prop. true known infestations)) / <br>
         ((Waterbodies * species) * prop. waterbodies habitable)")
       )
       } else {
         tags$figcaption(
-        HTML("Text displaying the approx. % of MN waterbody area invaded. Calculation:<br>
+        HTML("Approx. % of MN waterbody area invaded. Calculation:<br>
         (Known infested area (area/waterbody * # species/waterbody) * (1/prop. true known infestations)) / <br>
         ((Total waterbody area * species) * prop. waterbody area habitable)")
         )
@@ -698,11 +691,11 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     output$saturation_figcaption = renderUI({
       if(!input$saturation_byarea) {
         tags$figcaption(
-          "Line graph showing the change in total invasion saturation, in proportion of invasions per taxon per waterbody, over time for the waterbodies and taxa selected, based on your assumptions."
+          "Line graph showing change in total invasion saturation (proportion of invasions per taxon per waterbody; y-axis) over time (x-axis) based on your waterbody and taxa selections and your assumptions."
         )
       } else {
         tags$figcaption(
-          "Line graph showing the change in total invasion saturation, in proportion of invaded area per taxon per waterbody, over time for the waterbodies and taxa selected, based on your assumptions."
+          "Line graph showing change in total invasion saturation (proportion of invaded area per taxon per waterbody; y-axis) over time (x-axis) based on your waterbody and taxa selections and your assumptions."
         )
       }
     })
@@ -711,25 +704,25 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     if(estimated_saturation > 100) {
       
       output$saturation_context = renderText({
-        "That's obviously too high, based on what we know we know! Tone down your other assumptions."
+        "That's too high, based on what we know we know! Relax your assumptions."
       })
       
       session$sendCustomMessage("a11yLiveMessage", 
-                                "That's obviously too high, based on what we know we know! Tone down your other assumptions.")
+                                "That's too high, based on what we know we know! Relax your assumptions.")
       
     } else {
       
-      if(estimated_saturation < 5) { message = "If your assumptions are true, AIS spread prevention would be immensely valuable, as nearly all waterbodies are almost wholly uninvaded by the taxa under consideration."}
+      if(estimated_saturation < 5) { message = "If your assumptions are true, AIS spread prevention would be immensely valuable, as nearly all waterbodies are almost wholly uninvaded."}
       
-      if(estimated_saturation >= 5 & estimated_saturation < 10) { message = "If your assumptions are true, AIS spread prevention would be very valuable, as most waterbodies are entirely or mostly uninvaded by the taxa under consideration."}
+      if(estimated_saturation >= 5 & estimated_saturation < 10) { message = "If your assumptions are true, AIS spread prevention would be very valuable, as most waterbodies are entirely or mostly uninvaded."}
       
       if(estimated_saturation >= 10 & estimated_saturation < 25) { message = "If your assumptions are true, AIS spread prevention would be valuable, as many new invasions are still possible."}
       
       if(estimated_saturation >= 25 & estimated_saturation < 50) { message = "If your assumptions are true, AIS spread prevention may still be valuable, as many waterbodies are still susceptible to many new invasions."}
       
-      if(estimated_saturation >= 50 & estimated_saturation < 80) { message = "If your assumptions are true, AIS spread prevention may still be somewhat valuable, as some waterbodies are still susceptible to a few new invasions."}
+      if(estimated_saturation >= 50 & estimated_saturation < 80) { message = "If your assumptions are true, AIS spread prevention may still be somewhat valuable, as some waterbodies are still susceptible to some new invasions."}
       
-      if(estimated_saturation >= 80) { message = "If your assumptions are true, AIS spread prevention may have relatively little value; most waterbodies are already largely or fully invaded by the taxa under consideration."}
+      if(estimated_saturation >= 80) { message = "If your assumptions are true, AIS spread prevention may have relatively little remaining value; most habitable waterbodies are already largely or fully invaded."}
       
       output$saturation_context = renderText({
        message

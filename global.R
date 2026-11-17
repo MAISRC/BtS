@@ -25,6 +25,7 @@ library(htmlwidgets) #FOR SAVEWIDGET
 # CONVENIENCE FUNCTIONS --------------------------------
 
 source("Rcode/Scripts/shinyConvenienceFunctions.R")
+source("Rcode/Scripts/normalizeInvasiveCommonNames.R")
 
 make_infest_graph = function(currDF, pal2use) { #CURRDF HERE IS ALREADY SUMMARIZED
   
@@ -193,9 +194,10 @@ piCharterSupp$species = tolower(piCharterSupp$species) #CASE MATCHING
 
 #TAXON MATCHING
 #***LUMPING THE HYBRIDS TOGETHER FOR SIMPLICITY.
-piCharterSupp$species[piCharterSupp$species %in% c("hybrid water-milfoil", "eurasian water-milfoil")] = "Eurasian or hybrid watermilfoil" 
+piCharterSupp$species[piCharterSupp$species %in% c("hybrid water-milfoil", "eurasian water-milfoil", "eurasian or hybrid watermilfoil")] = "Eurasian or hybrid watermilfoil" 
 piCharterSupp$species[piCharterSupp$species %in% c("hybrid cattail", "narrow-leaved cattail")] = "narrow-leaved or hybrid cattail" 
 piCharterSupp$species[piCharterSupp$species == "curly pondweed"] = "curly-leaf pondweed"
+piCharterSupp$species[piCharterSupp$species == "yellow iris"] = "yellow flag"
 
 piCharterSupp$source = "P.I. Charter Database"
 
@@ -265,13 +267,7 @@ sci2common = allInvasivesList$common
 names(sci2common) = allInvasivesList$scientific
 NAS_filtered$species = unname(sci2common[NAS_filtered$species])
 
-stayCapped = c("Chinese mystery snail", "Eurasian or hybrid watermilfoil", "European valve snail", "European water-clover", "Japanese mystery snail", "Java waterdropwort", "Lumholtz's waterflea", "Ponto-Caspian scud", "New Zealand mudsnail", "European valve snail")
-
-NAS_filtered$species[!NAS_filtered$species %in% stayCapped] = tolower(NAS_filtered$species[!NAS_filtered$species %in% stayCapped]) #TURN ALL THESE TO LOWERCASE
-
-NAS_filtered$species[NAS_filtered$species == "New Zealand mudsnail"] = "New Zealand mud snail"
-NAS_filtered$species[NAS_filtered$species == "yellow iris"] = "yellow flag"
-NAS_filtered$species[NAS_filtered$species == "hybrid cattail"] = "narrow-leaved cattail" #***SIMPLIFYING
+NAS_filtered$species = normalizeInvasiveCommonNames(NAS_filtered$species)
 
 #FILTER TO ONLY THOSE OBSERVATIONS THAT TAKE PLACE PLAUSIBLY CLOSE TO A SPECIFIC WATERBODY.
 NAS_matches = NAS_filtered[lengths(st_is_within_distance(NAS_filtered, lakesDB, dist = 50)) > 0, ] #50 METERS SEEMS REASONABLY FAIR
@@ -291,46 +287,54 @@ NAS_joined = st_join(x = NAS_matches, y = lakesDB,
 NAS_joined$status[is.na(NAS_joined$status)] = "unknown"
 NAS_joined$status[NAS_joined$status == "locally established"] = "established"
 
-#TO FILTER THIS DATA SET, WE NEED TO ESTABLISH SOME RULES FOR HOW TO FILTER/SELECT RECORDS BY STATUS:
-#1. REMOVE "STOCKED" AS A STATUS--STOCKED POPULATIONS WOULD BE COLLECTIBLE W/O ANY EVIDENCE THEY ARE ESTABLISHED.
-#2. IF STATUS == "FAILED", "ERADICATED", OR "EXTIRPATED" WITHOUT A SUBSEQUENT "COLLECTED" OR "ESTABLISHED", REMOVE THAT WATERBODY AS NO LONGER INFESTED PENDING A NEW POSITIVE CONFIRMATION.
-#3. IF ONLY STATUS IS "UNKNOWN", RETAIN BUT TREAT AS "INCONCLUSIVE" VIA THE UNKNOWN TOGGLE.
-#4. "COLLECTED" AND "ESTABLISHED" ARE FUNCTIONALLY SYNONYMOUS. WHICHEVER IS EARLIER TAKES THE CONFIRMATION DATE. 
-#5. INTERVENING "UNKNOWNS" IN BETWEEN "COLLECTED"S OR "ESTABLISHED"S ARE IGNORED, AS ARE SUBSEQUENT UNKNOWNS ON AN ALREADY POSITIVE WATERBODY. 
+#RULES FOR SUMMARIZING EACH WATERBODY/TAXON HISTORY:
+#1. EXCLUDE STOCKED RECORDS AND RECORDS WITHOUT A YEAR.
+#2. WITHIN A YEAR, ANY COLLECTED/ESTABLISHED RECORD MAKES THE YEAR POSITIVE.
+#   OTHERWISE, ANY FAILED/ERADICATED/EXTIRPATED RECORD MAKES IT NEGATIVE.
+#   A YEAR WITH ONLY UNKNOWN RECORDS REMAINS UNKNOWN.
+#3. DISCARD THE LAST NEGATIVE YEAR AND ALL EARLIER YEARS. A RESTART REQUIRES
+#   A POSITIVE RECORD AFTER THAT YEAR; SUBSEQUENT UNKNOWNS ALONE DO NOT RESTART IT.
+#4. KEEP THE FIRST POSITIVE YEAR IN THE REMAINING HISTORY. UNKNOWN RECORDS
+#   BEFORE OR AFTER THAT POSITIVE DO NOT CHANGE ITS YEAR OR TRAJECTORY.
+#5. IF THE ENTIRE HISTORY IS UNKNOWN, RETAIN ITS FIRST YEAR AS INCONCLUSIVE.
 
-NAS_joined = NAS_joined %>% 
-  filter(status != "stocked") %>% #RULE 1
-  mutate(new_status = case_when( #SIMPLIFY TO JUST THREE REMAINING STATUS TYPES.
-    status %in% c("collected", "established") ~ "positive", #RULE 4
+NAS_joined = NAS_joined %>%
+  filter(status != "stocked", !is.na(year)) %>%
+  mutate(new_status = case_when(
+    status %in% c("collected", "established") ~ "positive",
     status %in% c("failed", "extirpated", "eradicated") ~ "negative",
-    status == "unknown" ~ "unknown" 
-  )) %>% 
-  mutate(sum_status = case_when( #RESOLVE WITHIN-YEAR STATUS CONFLICTS--CASE_WHEN RESOLVES SEQUENTIALLY LIKE AN IF ELSE SO FIRST HIT TAKES IT. 
-    all(new_status != "negative") & any(new_status == "positive") ~ "positive", 
-    all(new_status == "unknown") ~ "unknown",
-    TRUE ~ "negative" #HENCE WHY THIS CAN BE JUST TRUE. 
-  ),
-         .by = c(DOW, species, year)) %>% 
-  mutate(last_positive = max(year[sum_status == "positive"], -Inf), #THEN, DETERMINE WHEN TRAJECTORIES CONTAIN POSITIVE OR NEGATIVE EVENTS
-         last_negative = max(year[sum_status == "negative"], -Inf), 
-         .by = c(DOW, species)) %>% 
+    TRUE ~ "unknown"
+  )) %>%
+  mutate(sum_status = case_when(
+    any(new_status == "positive") ~ "positive",
+    any(new_status == "negative") ~ "negative",
+    TRUE ~ "unknown"
+  ), .by = c(DOW, species, year)) %>%
+  mutate(last_negative = max(year[sum_status == "negative"], -Inf),
+         .by = c(DOW, species)) %>%
+  filter(year > last_negative) %>%
   mutate(traj = case_when(
-    last_positive > last_negative ~ "positive", #IF ANY POSITIVE OCCURS AFTER THE LAST NEGATIVE (OR IF THERE ISN'T ONE), WE HIT HERE FIRST.
-    is.finite(last_negative) ~ "negative", #OTHERWISE, if NO POSITIVES AND THERE IS A NEGATIVE, OR THERE'S A NEGATIVE AFTER THE LAST POSITIVE, THEN WE HIT HERE.
-    TRUE ~ "unknown" #OTHERWISE, IT'S ALL UNKNOWNS AND WE HIT HERE. #RULE 3
-  )) %>% 
-  filter(traj != "negative") %>% #RULE 2
-  filter(traj == "unknown" | sum_status == "positive") %>% #FIRST UNKNOWN YEAR BUT ONLY FOR TRAJ == UNKNOWN OR ELSE FIRST POSITIVE YEAR.
-  filter(year == min(year), 
-         .by = c(DOW, species)) %>%  #RULES 4 AND 5
-  distinct(DOW, species, .keep_all = TRUE) %>%  #RESOLVES MULTIPLE OBSERVATIONS IN THE SAME YEAR.
-  select(-c(status, new_status, sum_status, last_positive, last_negative))
-  
+    any(sum_status == "positive") ~ "positive",
+    is.finite(first(last_negative)) ~ "negative",
+    TRUE ~ "unknown"
+  ), .by = c(DOW, species)) %>%
+  filter(traj != "negative") %>%
+  filter(traj == "unknown" | sum_status == "positive") %>%
+  filter(year == min(year, Inf), .by = c(DOW, species)) %>%
+  distinct(DOW, species, .keep_all = TRUE) %>%
+  select(-c(status, new_status, sum_status, last_negative))
+
 NAS_joined$source = "Nonindigenous Aquatic Species (NAS) Database"
 NAS_joined$connected = FALSE
 
 IWL_allSources = bind_rows(IWL_allSources, NAS_joined)
 IWL_allSources$traj[is.na(IWL_allSources$traj)] = "positive" #JUST TO FILL THIS REMAINING COLUMN FOR THE OTHER TWO SOURCES.
+
+## CLEANED EDDMAPS DATABASE -------------------------------------------
+EM_joined = readRDS("inputs/Dynamic/EDDMapS-current.rds")
+EM_joined$species = normalizeInvasiveCommonNames(EM_joined$species)
+
+IWL_allSources = bind_rows(IWL_allSources, EM_joined)
 
 # PRE-BAKE GLOBAL OBJECTS -----------------------------
 
