@@ -53,6 +53,8 @@ for(sp in speciesCodes) {
              !is.na(lat), !is.na(long), #MUST HAVE VALID COORDINATE DATA.
              long >= -97.22904, long <= -89.48923, 
              lat >= 43.49952, lat <= 49.38436,
+             infestationstatus != "Negative", #MEGAN LET ME KNOW THAT THESE TWO CODES PROBABLY TELL US NOTHING ABOUT THE TAXA THEY APPLY TO THAT'S VALUABLE.
+             managementstatus != "Not Found",
              !identificationcredibility %in% c("Negative", "Incorrect", "Unable to Confirm"), #THESE ARE FUNCTIONALLY NEGATIVE OBSERVATIONS, SO REMOVE.
              is.na(reviewed) | reviewed == TRUE, #ONLY ACCEPT REVIEWED RECORDS
              !is.na(year) #MUST HAVE A VALID YEAR
