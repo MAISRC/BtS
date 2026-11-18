@@ -167,6 +167,7 @@ IWL = infestedWaters %>%
 
 #MATCH THE DNR'S VHS ABBREVIATION TO THE COMMON NAME USED BY THE SPECIES LIST AND NAS.
 IWL$species[IWL$species == "VHS"] = "viral hemorrhagic septicemia virus"
+IWL$species[IWL$species == "New Zealand mud snail"] = "new zealand mudsnail"
 
 #JOIN CENTROID AND LAKE INFO TO IWL
 IWL_sf = left_join(IWL, lakesDBsimple, relationship = "many-to-one", by = "DOW") %>% 
@@ -186,17 +187,32 @@ piCharterSupp_sf = readRDS("inputs/Dynamic/PI_Charter-current.rds")
 IWL_allSources = bind_rows(IWL_sf, piCharterSupp_sf)
 
 ## CLEANED NAS DATABASE -------------------------------------------
+NAS_file = tempfile(fileext = ".rds")
 
-NAS_sf = readRDS("https://raw.githubusercontent.com/MAISRC/BtS/main/inputs/Dynamic/NAS-current.rds")
-# NAS_sf = readRDS("inputs/Dynamic/NAS-current.rds")
+download.file(
+  "https://raw.githubusercontent.com/MAISRC/BtS/main/inputs/Dynamic/NAS-current.rds",
+  destfile = NAS_file,
+  mode = "wb"
+)
 
-IWL_allSources = bind_rows(IWL_allSources, NAS_sf)
+NAS_current = readRDS(NAS_file)
+
+unlink(NAS_file)
+IWL_allSources = bind_rows(IWL_allSources, NAS_current)
 
 ## CLEANED EDDMAPS DATABASE -------------------------------------------
-EM_joined = readRDS("https://raw.githubusercontent.com/MAISRC/BtS/main/inputs/Dynamic/EDDMapS-current.rds")
-#EM_joined = readRDS("inputs/Dynamic/EDDMapS-current.rds")
+EM_file = tempfile(fileext = ".rds")
 
-IWL_allSources = bind_rows(IWL_allSources, EM_joined)
+download.file(
+  "https://raw.githubusercontent.com/MAISRC/BtS/main/inputs/Dynamic/EDDMapS-current.rds",
+  destfile = EM_file,
+  mode = "wb"
+)
+
+EM_current = readRDS(EM_file)
+
+unlink(EM_file)
+IWL_allSources = bind_rows(IWL_allSources, EM_current)
 
 IWL_allSources$traj[is.na(IWL_allSources$traj)] = "positive" #JUST TO FILL THIS REMAINING COLUMN FOR THE OTHER TWO SOURCES.
 

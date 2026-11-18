@@ -14,11 +14,11 @@ permissions:
 
 # Prevent two refreshes from running simultaneously.
 concurrency:
-  group: update-nas
+  group: update-occurrence-data
   cancel-in-progress: false
 
 jobs:
-  update-nas:
+  update-occurrence-data:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 

@@ -14,11 +14,11 @@ permissions:
 
 # Prevent two refreshes from running simultaneously.
 concurrency:
-  group: update-eddmaps
+  group: update-occurrence-data
   cancel-in-progress: false
 
 jobs:
-  update-eddmaps:
+  update-occurrence-data:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
