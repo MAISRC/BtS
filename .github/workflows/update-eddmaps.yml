@@ -41,7 +41,7 @@ jobs:
       - name: Install R packages
         shell: Rscript {0}
         run: |
-          install.packages(c("jsonlite", "tidyverse", "lubridate", "sf"))
+          install.packages(c("jsonlite", "dplyr", "stringr", "lubridate", "sf"))
 
       - name: Run EDDMapS download script
         shell: Rscript {0}
@@ -50,7 +50,7 @@ jobs:
           dir.create("inputs/Dynamic", recursive = TRUE, showWarnings = FALSE)
           source("Rcode/Scripts/updateEDDMapS.R")
 
-      - name: Commit updated CSV
+      - name: Commit updated RDS
         shell: bash
         run: |
           git config user.name "github-actions[bot]"

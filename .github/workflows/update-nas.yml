@@ -50,7 +50,7 @@ jobs:
           dir.create("inputs/Dynamic", recursive = TRUE, showWarnings = FALSE)
           source("Rcode/Scripts/updateNAS.R")
 
-      - name: Commit updated CSV
+      - name: Commit updated RDS
         shell: bash
         run: |
           git config user.name "github-actions[bot]"

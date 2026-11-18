@@ -1,5 +1,6 @@
 library(jsonlite) #TO GRAB THE DATA FROM EDDMAPS AS JSON
-library(tidyverse)
+library(dplyr)
+library(stringr)
 library(lubridate)
 library(sf)
 
@@ -31,7 +32,7 @@ for(sp in speciesCodes) {
       page
     )
     
-    nextDat = fromJSON(url) #CONVERT FROM JSON TO CSV.
+    nextDat = jsonlite::fromJSON(url) #CONVERT FROM JSON TO CSV.
     if(length(nextDat) == 0) {break} #BAIL IF NO RECORDS PULLED.
     
     #SOME NOTES ON COLUMNS EDDMAPS REPORTS:
