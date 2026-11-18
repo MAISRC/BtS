@@ -9,7 +9,8 @@ ui = fluidPage(
 # LOAD IN OUTSIDE FILES -----------------------------------------
   
   #LOAD IN OUR STYLE SHEET.
-  tags$head(tags$link(
+ tags$head(
+    tags$link(
     rel = "stylesheet", 
     type = "text/css",
     href = "BtSCSS.css" #OR WHATEVER YOU RENAME THIS FILE TO.
@@ -23,6 +24,7 @@ ui = fluidPage(
       src = "https://www.googletagmanager.com/gtag/js?id=G-xxxxx", #YOU WILL NEED TO GET ONE OF THESE G-TAGS FROM GOOGLE ANALYTICS
       async = ""
     ),
+
     shiny::tags$script(
       src = "js/googleanalytics.js" #PLACE THE G-TAG IN THE CODE PROVIDED HERE ALSO.
     ),
@@ -40,7 +42,6 @@ tags$script(
 #GENERATE A FUNCTION THAT ALLOWS JS AND SHINY TO SEND MESSAGES TO THE ARIA LIVE REPORTING REGION TO BE REPORTED TO SCREEN-READER USERS.
 tags$script(
   src = "js/shinyLiveReportingRegion.js"
-)
 ),
 
 #THIS SCRIPT ENSURES THAT EVERY TIME THE LEAFLET MAP GETS REBORN ON THIS PAGE, IT GETS ARIA-HIDDEN AND LOSES KEYBOARD NAV.
@@ -91,6 +92,13 @@ tags$script(HTML("
     scrubLeafletAccessibility();
   });
 ")),
+            
+tags$script(HTML("
+      $(function () {
+        $('[data-toggle=\"popover\"]').popover({container: 'body'});
+      });
+    "))         
+),
 
 # ### ENABLING OPTIONAL FUNCTIONALITY ### ------------------------------------------
 
@@ -140,13 +148,12 @@ tags$header(
       img(src = "beating-the-spread.png",
           alt = "Beating the Spread",#THIS ALT SHOULD JUST BE THE TEXT SIGHTED PERSONS WOULD SEE HERE.
           style = "min-width: 320px; max-height: 200px;")
-    ),
+    )
 ), 
     #IF THERE'S A NAV BAR IN THE HEADER, IT SHOULD BEAR THIS SEMANTIC TAG.
     class = "flexthis flexcol width100 justifycenter flexwrap",
     tags$nav( 
-                         
-      class = "flexthis flexwrap justifycenter",
+      class = "flexthis flexwrap justifycenter"
    )
 ),
 
@@ -156,7 +163,6 @@ tags$header(
 tags$main(
   id = "map_main",
   
-
 ### INFESTATION MAP DIV ---------------------------------------------------------
 
 tags$section(
@@ -201,7 +207,23 @@ tags$fieldset(
     column(width = 4, offset = 1, 
            
            pickerInput("infest_spp", 
-                       label = "Invader(s)",
+                       label = div("Invader(s)",
+                                   make_tooltip(
+                                     tooltipText = tagList(
+                                       downloadLink("invasives_list",
+                                                    label = "Download a CSV of the taxa MAISRC considers invasive this dashboard."),
+                                       tags$span("Our criteria for inclusion were as follows:"),
+                                       tags$ul(
+                                         tags$li("An established population at a waterbody can be reasonably inferred by even a single credible observation. Observations should not regularly represent visitors, transients, or released organisms that are unlikely to survive."),
+                                         tags$li("Once so established, a population is unlikely to disappear without eradication effort, which ought to be considerable."),
+                                         tags$li("The taxon can plausibly survive Minnesota winters and reproduce here, via whatever means needed to sustain a population."),
+                                         tags$li("The concensus amongst AIS entities in the state recognize the taxon as invasive and not merely as non-native."),
+                                         tags$li("The taxon would warrant a concommitant respose, such as surveillance, prevention, containment, control, or quarantine efforts."),
+                                         tags$li("The taxon is an aquatic invader insofar as it is managed as one.")
+                                       ),
+                                       tags$span("It's not a requirement that the taxon already be documented as present within the state. Also, for simplicity, some taxa, such as narrow-leaf and hybrid cattails, are treated as a single taxon for the purposes of the dashboard even though, from a management perspective, they are often treated very differently.")
+                                     )
+                                   )),
                        choices = taxa2pick, #SEE GLOBAL.R
                        selected = unique(startingDF$species), #SEE GLOBAL.R.
                        multiple = TRUE, 
@@ -257,7 +279,15 @@ tags$fieldset(
     column(width = 4, offset = 2, 
   
   sliderInput("infest_years", 
-              label = "Earliest year documented", 
+              label = div("Year of first documented (re-)establishment",
+                          make_tooltip(tooltipText = tagList(
+                            tags$span("We define an invader as \"established\" in a waterbody once any credible observation is made at that waterbody (or within 50 meters of its edge) across any of the sources selected, with the year of that first credible observation being what this slider filters by."), 
+                            br(), 
+                            tags$span("However, if any credible extirpation events were documented at a waterbody, the year of documented establishment becomes the first year subsequent to the last of these events. A credible extirpation event is defined differently by source:", 
+                            tags$ol(
+                              tags$li("PI Charter: A complete survey in a year subsequent to documentation fails to detect the taxon at even a single point"),
+                              tags$li("NAS: \"status\" values of \"failed\", \"extirpated\", and/or \"eradicated\" at all observed points within 50 meters of the waterbody in a given year."),
+                              tags$li("EDDMapS:  \"infestationstatus\" of \"eradicated\" and/or \"managementstatus\" of \"possibly eradicated\" at all observed points within 50 meters of the waterbody in a given year.")))))), 
               min = min(IWL_allSources$year, na.rm=T), 
               max = max(IWL_allSources$year, na.rm=T), 
               step = 1, 
@@ -266,11 +296,18 @@ tags$fieldset(
   ),
   
   checkboxInput("exclude_conns", 
-                label = "Exclude records listed due to connections with other waterbodies only (statute states waterbodies connected to infested waterbodies are infested, whether or not confirmed (confirmations rarely occur). Only affects the Infested Waters List.)", 
+                label = div("Exclude records listed due to connections with other waterbodies only.", make_tooltip(tooltipText = tagList(
+                  tags$span("Statute states waterbodies connected to infested waterbodies are infested, whether or not this has been independently confirmed (and such confirmations rarely occur)."), 
+                  tags$a(href = 'https://www.revisor.mn.gov/statutes/cite/84d.03', target = '_blank', "See the statute for more details."), 
+                  tags$span("Only applies to the Infested Waters List.")))), 
                 value = FALSE),
   
   checkboxInput("exclude_last_unknowns", 
-                label = "Exclude records whose only observations had status \"unknown\". Only relevant for the Nonindigenous Aquatic Species database.", 
+                label = div("Exclude records whose only observations had \"unknown\" status.", 
+                make_tooltip(tooltipText = tagList(
+                             tags$span("The Nonindigenous Aquatic Species database categorizes observations into various \"status\" categories. Among these is \"unknown\", which it treats differently and as more uncertain than its \"collected\", \"established\", \"eradicated\" and other categories. As such, MAISRC does not currently consider observations marked with this status as definite vis-a-vis those with a \"collected\" or \"established\" status and encourages their exclusion."), 
+                             tags$a(href = "https://nas.er.usgs.gov/about/faq.aspx#status", target = "_blank", "See their metadata for more details."),
+                             tags$span("Only relevant for the NAS database.")))), 
                 value = TRUE),
   
   checkboxInput("exclude_small_wbs", 
@@ -411,13 +448,6 @@ tags$section(
 hr(),
 br(), 
 
-### FURTHER INFO DIV ---------------------------------------------------------
-tags$section(
-  id = "info_area_div",
-  downloadLink("invasives_list",
-               label = "Download a CSV of all taxa we're considering invasive.")
-),
-
 ), #END MAIN
 
 ## ### FOOTER ### ----------------------------------------------------------
@@ -425,7 +455,7 @@ tags$section(
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
 HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center at the University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>.<br>
-App last updated Nov. 18 2026. Version 0.0.10.<br>
+App last updated Nov. 18 2026. Version 0.0.11.<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"

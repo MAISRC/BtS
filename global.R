@@ -66,6 +66,27 @@ make_infest_graph = function(currDF, pal2use) { #CURRDF HERE IS ALREADY SUMMARIZ
            ))
 
 }
+
+make_tooltip = function(tooltipText, 
+                        tooltipIcon = "question-circle", 
+                        pos = "auto", 
+                        tooltipLabel = "") {
+  
+  tags$p(
+    class = "inline-tooltips",
+    tooltipLabel,
+    tags$span(
+      icon(tooltipIcon),
+      `data-toggle` = "popover",
+      `data-trigger` = "click",
+      `data-html` = "true",
+      onclick = "event.preventDefault()",
+      `data-placement` = pos, # options: top, bottom, left, right, auto
+      `data-content` = as.character(tooltipText)
+    )
+  )
+  
+}
  
 # LOAD NECESSARY INPUTS -------------------------------------------
 

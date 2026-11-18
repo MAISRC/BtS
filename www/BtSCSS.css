@@ -393,3 +393,24 @@ span.irs-bar {
   white-space: normal;
   overflow-wrap: break-word;
 }
+
+p.inline-tooltips {
+  display: inline;
+}
+
+/* Disable clicks on the entire label wrapper for a specific checkbox */
+#exclude_conns ~ span, #exclude_last_unknowns,
+  label:has(#exclude_conns, #exclude_last_unknowns) {
+    pointer-events: none;
+    cursor: default;
+}
+
+/* Re-enable clicks strictly on the checkbox square */
+#exclude_conns, p.inline-tooltips, #exclude_last_unknowns {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.popover {
+  max-width: 450px !important;
+}
