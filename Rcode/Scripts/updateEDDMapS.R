@@ -90,7 +90,7 @@ EM_joined = st_join(x = allDat_sf, y = lakesDB,
   st_transform(crs = 4326) %>% 
   arrange(DOW, species, year) %>% 
   mutate(possiblyGone = case_when( #SIMPLIFY INTO VALID OBSERVATIONS VERSUS VALID NON-OBSERVATIONS
-    infestationstatus %in% c("Eradicated", "Negative") | managementstatus %in% c("Not Found", "Possibly Eradicated") ~ TRUE,
+    infestationstatus %in% c("Eradicated") | managementstatus %in% c("Possibly Eradicated") ~ TRUE, #MEGAN LET ME KNOW THAT IN EDDMAPS, NEGATIVES FOR INFESTATION STATUS MIGHT SIMPLY INDICATE MIS-IDED RECORDS. MEANWHILE, FOR MANAGEMENTSTATUS, A "NOT FOUND" IS JUST SEEMINGLY THE SAME THING AS "NEGATIVE" IS FOR PLANTS, BUT FOR ANIMALS. 
     TRUE ~ FALSE
   )) %>% 
   mutate(.by = c(DOW, species, year),

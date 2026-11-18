@@ -25,7 +25,6 @@ library(htmlwidgets) #FOR SAVEWIDGET
 # CONVENIENCE FUNCTIONS --------------------------------
 
 source("Rcode/Scripts/shinyConvenienceFunctions.R")
-source("Rcode/Scripts/normalizeInvasiveCommonNames.R")
 
 make_infest_graph = function(currDF, pal2use) { #CURRDF HERE IS ALREADY SUMMARIZED
   
