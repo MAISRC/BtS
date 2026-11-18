@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  update-nas:
+  update-eddmaps:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -38,7 +38,7 @@ jobs:
         run: |
           install.packages(c("jsonlite", "tidyverse", "lubridate", "sf"))
 
-      - name: Run NAS download script
+      - name: Run EDDMapS download script
         shell: Rscript {0}
         run: |
           library(dplyr)
