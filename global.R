@@ -175,166 +175,30 @@ IWL_sf = left_join(IWL, lakesDBsimple, relationship = "many-to-one", by = "DOW")
 IWL_sf$source = "MN DNR's Infested Waters List"
 
 #***COMBINE RELATED TAXA
-IWL_sf$species[IWL_sf$species == "Eurasian watermilfoil"] = "Eurasian or hybrid watermilfoil"
+IWL_sf$species[IWL_sf$species == "Eurasian watermilfoil"] = "eurasian or hybrid watermilfoil"
+IWL_sf$species = tolower(IWL_sf$species)
 
 ## CLEANED, CURRENT PI CHARTER GRAB -------------------------------------------
 
 #LOAD IN PI CHARTER SUPPLEMENTAL FOR AQUATIC PLANTS
-piCharterSupp = readr::read_csv("inputs/MadeUpstream/PI_Charter_Positives.csv",
-                                col_select = c(DOW, species = taxon, year = FIRST_YEAR),
-                                col_types = readr::cols( 
-                                  DOW = readr::col_character(), 
-                                  taxon = readr::col_character(),
-                                  FIRST_YEAR = readr::col_integer()
-                                ), name_repair = "minimal") %>%  #TO QUIET NEW NAMES WARNINGS.
-    dplyr::filter(!is.na(year))  #***ONE INSTANCE IS COMING THRU OF A LAKE HAVING CLPW THAT IT DOESN'T ACTUALLY HAVE, ACCORDING TO THE LIVE VERSION OF THE APP...WORTH DOUBLE-CHECKING.
- 
-
-piCharterSupp$species = tolower(piCharterSupp$species) #CASE MATCHING
-
-#TAXON MATCHING
-#***LUMPING THE HYBRIDS TOGETHER FOR SIMPLICITY.
-piCharterSupp$species[piCharterSupp$species %in% c("hybrid water-milfoil", "eurasian water-milfoil", "eurasian or hybrid watermilfoil")] = "Eurasian or hybrid watermilfoil" 
-piCharterSupp$species[piCharterSupp$species %in% c("hybrid cattail", "narrow-leaved cattail")] = "narrow-leaved or hybrid cattail" 
-piCharterSupp$species[piCharterSupp$species == "curly pondweed"] = "curly-leaf pondweed"
-piCharterSupp$species[piCharterSupp$species == "yellow iris"] = "yellow flag"
-
-piCharterSupp$source = "P.I. Charter Database"
-
-#WHEN THE TAXA GET LUMPED, AS ABOVE, IT CREATES THE POSSIBILITY OF FUNCTIONALLY DUPLICATE RECORDS. 
-
-piCharterSupp = piCharterSupp %>% 
-  dplyr::filter(year == min(year), .by = c(DOW, species)) %>% 
-  distinct(DOW, species, year , .keep_all = TRUE) #THE ABOVE WOULDN'T GET RID OF SAME-YEAR COLLISIONS, SO THIS IS NEEDED TO DO SO.
-
-piCharterSupp_sf = left_join(piCharterSupp, lakesDBsimple, relationship = "many-to-one", by = "DOW")
-
-piCharterSupp_sf$connected = FALSE
+piCharterSupp_sf = readRDS("inputs/Dynamic/PI_Charter-current.rds")
 
 IWL_allSources = bind_rows(IWL_sf, piCharterSupp_sf)
 
 ## CLEANED NAS DATABASE -------------------------------------------
 
-NAS_sf = readr::read_csv("https://raw.githubusercontent.com/MAISRC/BtS/main/inputs/Dynamic/NAS-current.csv",
-                      col_select = c(species, latitude, longitude, year, status),
-                      col_types = readr::cols(
-                        species = readr::col_character(),
-                        latitude = readr::col_number(),
-                        longitude = readr::col_number(),
-                        year = readr::col_number(),
-                        status = readr::col_character(),
-                       )
-                      ) %>% 
-  dplyr::filter(
-    #I THINK FILTERING BY STATUS BEFORE WE HAVE A DOW COULD BE PREMATURE.
-    #!status %in% c("failed", "extirpated", "eradicated", "stocked"),#***SOMETHING OF A JUDGMENT CALL HERE.
-                !is.na(latitude), !is.na(longitude), #ONLY ONE OF THESE AT TIME OF WRITING. 
-                longitude >= -97.22904, longitude <= -89.48923, #ALSO SOME INVALID LAT/LONGS
-                latitude >= 43.49952, latitude <= 49.38436,
-                !species %in% c("Dreissena sp.", "Helisoma sp.")) %>% 
-#  dplyr::select(-status) %>%  #DITCH IT NOW.
-  sf::st_as_sf(crs = 4326, coords = c("longitude", "latitude"))
+NAS_sf = readRDS("https://raw.githubusercontent.com/MAISRC/BtS/main/inputs/Dynamic/NAS-current.rds")
+# NAS_sf = readRDS("inputs/Dynamic/NAS-current.rds")
 
-#ADJUST SOME SPECIES NAMES FOR PROPER JOINING
-NAS_sf$species[NAS_sf$species == "Phragmites australis australis"] = "Phragmites australis"
-NAS_sf$species[NAS_sf$species == "Eubosmina coregoni"] = "Bosmina coregoni"
-NAS_sf$species[NAS_sf$species == "Cipangopaludina japonica"] = "Heterogen japonica"
-NAS_sf$species[NAS_sf$species == "Eichhornia crassipes"] = "Pontederia crassipes"
-NAS_sf$species[NAS_sf$species == "Myriophyllum × hybridum"] = "Myriophyllum spicatum"
-NAS_sf$species[NAS_sf$species == "Ctenopharyngodon idella var. diploid"] = "Ctenopharyngodon idella"
-NAS_sf$species[NAS_sf$species == "Typha × glauca"] = "Typha angustifolia" #***SIMPLIFYING
-
-#HISTORICAL SCIENTIFIC NAMES FOR THE NEW PATHOGENS. NONE APPEAR IN THE CURRENT NAS FILE.
-NAS_sf$species[NAS_sf$species == "Myxosoma cerebralis"] = "Myxobolus cerebralis"
-NAS_sf$species[NAS_sf$species == "Heterosporis sutherlanda"] = "Heterosporis sutherlandae" #SPELLING USED ON THE MAISRC PAGE
-NAS_sf$species[NAS_sf$species %in% c("Piscine novirhabdovirus", "Oncorhynchus 2 novirhabdovirus",
-                                  "Viral hemorrhagic septicemia virus")] = "Novirhabdovirus piscine"
-NAS_sf$species[NAS_sf$species %in% c("Santee-Cooper ranavirus", "Largemouth bass virus")] = "Ranavirus micropterus1"
-NAS_sf$species[NAS_sf$species %in% c("Carp sprivivirus", "Rhabdovirus carpio",
-                                  "Spring viremia of carp virus", "Spring viraemia of carp virus")] = "Sprivivirus cyprinus"
-
-#OLDER NAMES USED IN THE MISAC RATINGS AND SPECIES RECORDS.
-NAS_sf$species[NAS_sf$species == "Cylindrospermopsis raciborskii"] = "Raphidiopsis raciborskii"
-NAS_sf$species[NAS_sf$species %in% c("Cyprinid herpesvirus 3", "Koi herpesvirus")] = "Cyvirus cyprinidallo3"
-
-#FIND THE SPECIES THAT OVERLAP W/ OUR INVASIVE SPECIES LIST AND FILTER TO ONLY THOSE
-overlaps = intersect(x = NAS_sf$species, allInvasivesList$scientific)
-NAS_filtered = NAS_sf %>% 
-  filter(species %in% overlaps)
-
-#THEN, CONVERT OVER TO THE STANDARDIZED COMMON NAMES
-sci2common = allInvasivesList$common
-names(sci2common) = allInvasivesList$scientific
-NAS_filtered$species = unname(sci2common[NAS_filtered$species])
-
-NAS_filtered$species = normalizeInvasiveCommonNames(NAS_filtered$species)
-
-#FILTER TO ONLY THOSE OBSERVATIONS THAT TAKE PLACE PLAUSIBLY CLOSE TO A SPECIFIC WATERBODY.
-NAS_matches = NAS_filtered[lengths(st_is_within_distance(NAS_filtered, lakesDB, dist = 50)) > 0, ] #50 METERS SEEMS REASONABLY FAIR
-
-#JOIN IN THE LAKE DATABASE DATA TO GET CENTROID, SIZE, COUNTY, ETC. DATA. ***WILL JOIN SOME RECORDS TO MULTIPLE WATERBODIES BY VIRTUE OF PROXIMITY. I HAVE NO REASON TO THINK THAT'S A BAD THING THOUGH.
-NAS_joined = st_join(x = NAS_matches, y = lakesDB, 
-                     join = st_is_within_distance, dist = 50) %>% 
-  st_drop_geometry() %>% #DITCH THE OBSERVATION GEOMETRY.
-  st_as_sf(crs = 26915, coords = c("center_utm", "center_u_1")) %>% #CHANGE OVER TO THE LAKE CENTROID GEOMETRY.
-  st_transform(crs = 4326) %>% 
-  arrange(DOW, species, year) #SORT SO THAT, BY WB AND SPECIES, ALL OCCURANCES OCCUR IN TEMPORAL ORDER.
-
-
-#NEXT, WE FILTER BY STATUSES, NOW THAT WE HAVE DOWS. 
-
-#MAKE MORE CONSISTENT FOR MATCHING
-NAS_joined$status[is.na(NAS_joined$status)] = "unknown"
-NAS_joined$status[NAS_joined$status == "locally established"] = "established"
-
-#RULES FOR SUMMARIZING EACH WATERBODY/TAXON HISTORY:
-#1. EXCLUDE STOCKED RECORDS AND RECORDS WITHOUT A YEAR.
-#2. WITHIN A YEAR, ANY COLLECTED/ESTABLISHED RECORD MAKES THE YEAR POSITIVE.
-#   OTHERWISE, ANY FAILED/ERADICATED/EXTIRPATED RECORD MAKES IT NEGATIVE.
-#   A YEAR WITH ONLY UNKNOWN RECORDS REMAINS UNKNOWN.
-#3. DISCARD THE LAST NEGATIVE YEAR AND ALL EARLIER YEARS. A RESTART REQUIRES
-#   A POSITIVE RECORD AFTER THAT YEAR; SUBSEQUENT UNKNOWNS ALONE DO NOT RESTART IT.
-#4. KEEP THE FIRST POSITIVE YEAR IN THE REMAINING HISTORY. UNKNOWN RECORDS
-#   BEFORE OR AFTER THAT POSITIVE DO NOT CHANGE ITS YEAR OR TRAJECTORY.
-#5. IF THE ENTIRE HISTORY IS UNKNOWN, RETAIN ITS FIRST YEAR AS INCONCLUSIVE.
-
-NAS_joined = NAS_joined %>%
-  filter(status != "stocked", !is.na(year)) %>%
-  mutate(new_status = case_when(
-    status %in% c("collected", "established") ~ "positive",
-    status %in% c("failed", "extirpated", "eradicated") ~ "negative",
-    TRUE ~ "unknown"
-  )) %>%
-  mutate(sum_status = case_when(
-    any(new_status == "positive") ~ "positive",
-    any(new_status == "negative") ~ "negative",
-    TRUE ~ "unknown"
-  ), .by = c(DOW, species, year)) %>%
-  mutate(last_negative = max(year[sum_status == "negative"], -Inf),
-         .by = c(DOW, species)) %>%
-  filter(year > last_negative) %>%
-  mutate(traj = case_when(
-    any(sum_status == "positive") ~ "positive",
-    is.finite(first(last_negative)) ~ "negative",
-    TRUE ~ "unknown"
-  ), .by = c(DOW, species)) %>%
-  filter(traj != "negative") %>%
-  filter(traj == "unknown" | sum_status == "positive") %>%
-  filter(year == min(year, Inf), .by = c(DOW, species)) %>%
-  distinct(DOW, species, .keep_all = TRUE) %>%
-  select(-c(status, new_status, sum_status, last_negative))
-
-NAS_joined$source = "Nonindigenous Aquatic Species (NAS) Database"
-NAS_joined$connected = FALSE
-
-IWL_allSources = bind_rows(IWL_allSources, NAS_joined)
-IWL_allSources$traj[is.na(IWL_allSources$traj)] = "positive" #JUST TO FILL THIS REMAINING COLUMN FOR THE OTHER TWO SOURCES.
+IWL_allSources = bind_rows(IWL_allSources, NAS_sf)
 
 ## CLEANED EDDMAPS DATABASE -------------------------------------------
-EM_joined = readRDS("inputs/Dynamic/EDDMapS-current.rds")
-EM_joined$species = normalizeInvasiveCommonNames(EM_joined$species)
+EM_joined = readRDS("https://raw.githubusercontent.com/MAISRC/BtS/main/inputs/Dynamic/EDDMapS-current.rds")
+#EM_joined = readRDS("inputs/Dynamic/EDDMapS-current.rds")
 
 IWL_allSources = bind_rows(IWL_allSources, EM_joined)
+
+IWL_allSources$traj[is.na(IWL_allSources$traj)] = "positive" #JUST TO FILL THIS REMAINING COLUMN FOR THE OTHER TWO SOURCES.
 
 # PRE-BAKE GLOBAL OBJECTS -----------------------------
 

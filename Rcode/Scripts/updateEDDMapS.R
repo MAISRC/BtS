@@ -70,7 +70,7 @@ for(sp in speciesCodes) {
 }
 
 #TRANSITION TO NEW TAXA NAMES ONCE
-newNames = taxonCodes$common
+newNames = taxonCodes$canonical_common
 names(newNames) = taxonCodes$eddmaps_name
 allDat$species = unname(newNames[allDat$scientificname])
 allDat$scientificname = NULL
@@ -114,6 +114,7 @@ EM_joined = st_join(x = allDat_sf, y = lakesDB,
 EM_joined$source = "EDDMapS Database"
 EM_joined$connected = FALSE
 EM_joined$traj = "positive"
+EM_joined$species = tolower(EM_joined$species)
 
 t2 = Sys.time()
 print(t2-t1)
