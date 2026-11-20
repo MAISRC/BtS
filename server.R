@@ -199,11 +199,7 @@ shinyServer(function(input, output, session) {
    satovertime_download(p)
    
    output$saturation_caption = renderUI({
-       tags$figcaption(
-         HTML("Approx. % of MN waterbodies invaded. Calculation:<br>
-        (Known infestations (per waterbody + species) * (1/prop. true known infestations)) / <br>
-        ((Waterbodies * species) * prop. waterbodies habitable)")
-       )
+     make_saturation_caption()
    })
    
    p
@@ -672,19 +668,7 @@ observeEvent(curr_map_sf(), ignoreInit = TRUE, {
     
     #MAKE CONTEXT-APPROPRIATE CAPTION.
     output$saturation_caption = renderUI({
-      if(!input$saturation_byarea) {
-      tags$figcaption(
-        HTML("Approx. % of MN waterbodies invaded. Calculation:<br>
-        (Known infestations (per waterbody + species) * (1/prop. true known infestations)) / <br>
-        ((Waterbodies * species) * prop. waterbodies habitable)")
-      )
-      } else {
-        tags$figcaption(
-        HTML("Approx. % of MN waterbody area invaded. Calculation:<br>
-        (Known infested area (area/waterbody * # species/waterbody) * (1/prop. true known infestations)) / <br>
-        ((Total waterbody area * species) * prop. waterbody area habitable)")
-        )
-      }
+      make_saturation_caption(byArea = input$saturation_byarea)
     })
     
     #AND SAME W/ A FIGURE CAPTION.

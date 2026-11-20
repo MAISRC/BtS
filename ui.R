@@ -92,10 +92,31 @@ tags$script(HTML("
     scrubLeafletAccessibility();
   });
 ")),
-            
+         
+#THIS SCRIPT ENABLES BOOTSTRAP-STYLE ON-CLICK TOOLTIPS. THESE REBIND THRU SHINY WHEN THEY OPEN AND DEBIND WHEN HTYE CLOSE, ALLOWING SHINY ELEMENTS TO GAIN INTERACTABILITY WITHIN THEM AS THEY OPEN.
 tags$script(HTML("
       $(function () {
-        $('[data-toggle=\"popover\"]').popover({container: 'body'});
+        // Delegate initialization so popovers in renderUI captions work too.
+        $('body').popover({selector: '[data-toggle=\"popover\"]', container: 'body'});
+      });
+
+      $(document).on('shown.bs.popover', '[data-toggle=\"popover\"]', function () {
+        var popover = document.getElementById(this.getAttribute('aria-describedby'));
+        if (!popover) return;
+
+        // Bootstrap inserts the content after Shiny's initial binding pass.
+        Shiny.bindAll(popover);
+        if (window.MathJax) MathJax.Hub.Queue(['Typeset', MathJax.Hub, popover]);
+      });
+
+      $(document).on('hide.bs.popover', '[data-toggle=\"popover\"]', function () {
+        var popover = document.getElementById(this.getAttribute('aria-describedby'));
+        if (popover) Shiny.unbindAll(popover);
+      });
+
+      // Remove the old body-level popover before Shiny replaces its caption.
+      $(document).on('shiny:value', '#saturation_caption', function () {
+        $(this).find('[data-toggle=\"popover\"]').popover('destroy');
       });
     "))         
 ),
@@ -106,6 +127,7 @@ tags$script(HTML("
 
 waiter::useWaiter(), #NECESSARY TO TURN ON THE WAITER PACKAGE'S FEATURES.
 shinyjs::useShinyjs(), #ENABLE SHINYJS
+withMathJax(), #TYPESET EQUATIONS WHEN A CALCULATION POPOVER OPENS.
 
 
 #   ### ADD POLISHING UI ELEMENTS ### -------------------------------------
@@ -262,7 +284,10 @@ tags$fieldset(
            suppressNativeSelectAccessibility("infest_source"),
            
            pickerInput("wb_types", 
-                       label = "Waterbody types (as designated by the MN DNR)",
+                       label = div("Waterbody types", make_tooltip(tooltipText = tagList(
+                         tags$span("The MN DNR designated inland waterbodies into several classifications. We've included all those at all likely to receive aquatic invasive species management. For more details, consult "),
+                         tags$a(href = "https://www.dnr.state.mn.us/waters/watermgmt_section/pwpermits/pw_definition.html", target = "_blank", "the statutes governing the definitions of different types of waterbodies.")
+                       ))),
                        choices = sort(unique(IWL_allSources$wb_class)), 
                        selected = startingWBTypes, 
                        multiple = TRUE, 
@@ -311,15 +336,32 @@ tags$fieldset(
                 value = TRUE),
   
   checkboxInput("exclude_small_wbs", 
-                label = "Restrict to waterbodies >= 10 acres (according to the MN DNR's hydrography database).", 
+                label = div("Exclude waterbodies < 10 acres.",
+                            make_tooltip(tooltipText = tagList(
+                              tags$span("Many MAISRC tools assume that only waterbodies of a certain minimum size are of interest in prevention work; 10 acres is a cutoff used on"),
+                              tags$a(href = "https://www.aisexplorer.umn.edu/", target = "_blank", "AIS Explorer"),
+                              tags$span(", for example. Acreage is as reported in the "),
+                              tags$a(target = "_blank", href = "https://gis.data.mn.gov/datasets/minnesota::dnr-hydro-features-all-1/explore?location=46.435000%2C-93.380000%2C6", "MN DNR's hydrography features all data set"),
+                              tags$span(", last downloaded on Aug. 4, 2022.")
+                            )
+                  
+                )),
                 value = excludeSmallStart),
   
   checkboxInput("exclude_noaccess", 
-                label = "Exclude waterbodies without public motorized boat launches (according to the MN DNR's database).", 
+                label = div("Exclude waterbodies without public accesses.",
+                            make_tooltip(tooltipText = tagList(
+                              tags$span("Research by MAISRC has repeated indicated that the movement of motorized boats and other boating equipment between waterbodies is the overwhelming cause of new invasions not due to natural waterbody connections. The MN DNR has a "),
+                              tags$a(href = "https://gis.data.mn.gov/datasets/minnesota::public-water-access-sites-in-minnesota-1/explore?location=46.435000%2C-93.380000%2C6", target = "_blank", "database of public water access points suitable for motorized boats"),
+                              tags$span("That we're using for this filter. In some cases, the waterbody listed for an access is not actually one accessible by boat from that access, e.g., due to the presence of a dam or other obstruction.")
+                            ))), 
                 value = FALSE),
   
   checkboxInput("exclude_rares",
-                label = "Exclude taxa with few (< 10 different waterbodies) documented observations to date",
+                label = div("Exclude taxa with < 10 documented establishments ever.",
+                            make_tooltip(tooltipText = tagList(
+                              tags$span("Most taxa thought to be invasive to Minnesota have not even arrived yet. For those that have, some have only recently become established, and others may be found in only a select few waterbodies. Use this toggle to filter those rare taxa out.")
+                            ))),
                 value = excludeRaresStart)
 
      ) #END SECOND COL
@@ -360,6 +402,7 @@ tags$section(
   
   #### SATURATION EXPLANATION ---------------------------------------------------------
   tags$section(
+    id = "saturation_explainer",
     p("Prevention can only work when there's something left to prevent! What fraction of Minnesota's waterbodies  haven't", em("yet"), "been invaded but remain invadable? Or, said differently, \"How close to fully invaded\" are we?"),
     p("The answer hinges on three factors: "),
     tags$ul(
@@ -417,7 +460,10 @@ tags$section(
                  step = 1
                  ),
     checkboxInput("saturation_byarea",
-                  label = "Calculate invasion saturation by total waterbody area instead", 
+                  label = div("Calculate invasion saturation by total waterbody area instead.",
+                              make_tooltip(tooltipText = tagList(
+                                tags$span("This calculation is a rough and almost certain overestimate. To calculate it, we assume a waterbody invaded by taxon X is fully invaded with X, i.e., all (habitable) area (littoral and otherwise) is invaded. Granted, this is our assumption either way, but it has a disportionate impact on the result when large waterbodies \"count more\" than small ones. We include it to facilitate exploration of the implications of the fact that, in general, it is disproportionately Minnesota's large waterbodies that are already invaded.")
+                              ))), 
                   value = FALSE)
    )
   ), #END COL 1
@@ -455,7 +501,7 @@ br(),
 #Insert a footer with links, contact info, funding credits, and current version number.
 tags$footer(
 HTML("<br>Beating The Spread was created by the Minnesota Aquatic Invasive Species Research Center at the University of Minnesota by <address><a href='mailto:bajcz003@umn.edu'>Dr. Alex Bajcz (bajcz003@umn.edu)</a></address>.<br>
-App last updated Nov. 18 2026. Version 0.0.11.<br>
+App last updated Nov. 20 2026. Version 0.0.12.<br>
 Funding for this work was provided by the Minnesota Environment and Natural Resources Trust Fund as recommended by the Minnesota Aquatic Invasive Species Research Center and the Legislative-Citizen Commission on Minnesota Resources, and the State of Minnesota.<br><br>"), 
 id = "footerText",
 style = "min-width: 320px;"

@@ -77,10 +77,14 @@ make_tooltip = function(tooltipText,
     tooltipLabel,
     tags$span(
       icon(tooltipIcon),
+      tabindex = "0",
+      role = "button",
+      `aria-label` = if(nzchar(tooltipLabel)) tooltipLabel else "More information",
       `data-toggle` = "popover",
       `data-trigger` = "click",
       `data-html` = "true",
       onclick = "event.preventDefault()",
+      onkeydown = "if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }",
       `data-placement` = pos, # options: top, bottom, left, right, auto
       `data-content` = as.character(tooltipText)
     )
@@ -88,6 +92,34 @@ make_tooltip = function(tooltipText,
   
 }
  
+
+# FUNCTION FROM CODEX THAT CREATES THE FORMULA SHOWN IN THE TOOLTIP FOR THE SATURATION CALCULATION.
+make_saturation_caption = function(byArea = FALSE) {
+  tags$figcaption(
+    if(byArea) "Approx. % of MN waterbody area invaded." else "Approx. % of MN waterbodies invaded.",
+    make_tooltip(
+      tooltipText = tagList(
+        tags$p("Estimated invasion saturation (%):"),
+        if(byArea) {
+          tags$p("\\[\\widehat{S}_A = 100 \\times \\frac{I_A / p_d}{A \\, T \\, p_h}\\]")
+        } else {
+          tags$p("\\[\\widehat{S} = 100 \\times \\frac{I / p_d}{W \\, T \\, p_h}\\]")
+        },
+        tags$ul(
+          tags$li(tags$strong(if(byArea) "\\(I_A\\): " else "\\(I\\): "),
+                  if(byArea) "Total areas of waterbodies with documented invasions, each multiplied by the number of invaders documented." else "Numbers of waterbodies with documented invasions multipled by the number of invaders documented at each."),
+          tags$li(tags$strong(if(byArea) "\\(A\\): " else "\\(W\\): "),
+                  if(byArea) "Total area of all waterbodies that meet your selections." else "Total number of waterbodies that meet your selections."),
+          tags$li(tags$strong("\\(T\\): "), "Total number of invaders that meet your selections."),
+          tags$li(tags$strong("\\(p_d\\): "), "Fraction of true infestations that have been successfully documented (your percentage divided by 100)."),
+          tags$li(tags$strong("\\(p_h\\): "), "Fraction of lakes/lake area actually inhabitable (your percentage divided by 100).")
+        ),
+        if(byArea) tags$p("Note: Lake Superior is excluded from both area totals due to its disproportionate size.")
+      )
+    )
+  )
+}
+
 # LOAD NECESSARY INPUTS -------------------------------------------
 
 ## BASIC INPUTS -------------------------------------------

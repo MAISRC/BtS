@@ -24,6 +24,8 @@ body {
 a {
   color: #704D00;
   text-decoration: underline;
+  margin: 1px;
+  padding 1px;
 }
 
 a:hover {
@@ -228,6 +230,7 @@ legend {
   font-size: 95%;
   margin-left: 5px;
   margin-right: 5px;
+  width: 100% !important;
 }
 
 /* THIS RULE APPLIES TO ANY SELECTINPUTS THAT GET DROPDOWN MENUS. THIS SETS THEIR FONT AND BACKGROUND COLORS TO BE MORE READABLE. */
@@ -279,8 +282,9 @@ div.datepicker {
 
 /* IF YOU USE ANY CHECKBOX-STYLE INPUTS, THIS RULE WILL ADJUST THE APPEARANCE OF THE ACTUAL CHECKBOX ITSELF. */
 input[type="checkbox"] {
-  width: 20px;
+  width: 20px !important;
   height: 20px;
+  margin-left: -25px !important;
 }
 
 /* ### ADJUSTING DT TABLES ### */
@@ -399,18 +403,25 @@ p.inline-tooltips {
 }
 
 /* Disable clicks on the entire label wrapper for a specific checkbox */
-#exclude_conns ~ span, #exclude_last_unknowns,
-  label:has(#exclude_conns, #exclude_last_unknowns) {
+#exclude_conns ~ span, #exclude_last_unknowns ~ span, #exclude_small_wbs ~ span
+  label:has(#exclude_conns, #exclude_last_unknowns, #exclude_small_wbs) {
     pointer-events: none;
     cursor: default;
 }
 
 /* Re-enable clicks strictly on the checkbox square */
-#exclude_conns, p.inline-tooltips, #exclude_last_unknowns {
+#exclude_conns, p.inline-tooltips, #exclude_last_unknowns, #exclude_small_wbs, a#invasives_list {
   pointer-events: auto;
   cursor: pointer;
 }
 
 .popover {
   max-width: 450px !important;
+}
+
+section#saturation_explainer {
+  border: 2px solid #900021;
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 15px;
 }
